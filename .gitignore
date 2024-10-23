@@ -11,3 +11,20 @@
 
 #!.yarn/cache
 .pnp.*
+
+# npm, typescript
+node_modules
+dist
+
+# Hardhat files
+cache
+artifacts
+
+# IDE
+.vscode
+
+# MacOS
+.DS_store
+
+#
+.env

@@ -1,0 +1,70 @@
+rpcEth: https://mainnet.infura.io/v3/
+rpcOpt: https://optimism-mainnet.infura.io/v3/
+
+parameters:
+  - &agent "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c"
+  - &lido "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+  - &accountingOracle "0x852deD011285fe67063a08005c71a85690503Cee"
+  - &wstETH "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
+  - &stETH "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+  - &l1EmergencyBreaksMultisig "0x73b047fe6337183A454c5217241D780a932777bD"
+  - &l2EmergencyBreaksMultisig "0x4Cf8fE0A4c2539F7EFDD2047d8A5D46F14613088"
+  - &l1CrossDomainMessenger "0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1"
+  - &l2CrossDomainMessenger "0x4200000000000000000000000000000000000007"
+  - &l2GovernanceExecutor "0xEfa0dB536d2c8089685630fafe88CF7805966FC3"
+
+deployParameters:
+  ethereum:
+    tokenRateNotifier:
+      lido: *lido
+      tokenRateNotifierOwner: *agent
+    opStackTokenRatePusher:
+      messenger: *l1CrossDomainMessenger
+      wstETH: *wstETH
+      accountingOracle: *accountingOracle
+      l2GasLimitForPushingTokenRate: 300000
+    tokenBridge:
+      proxyAdmin: *agent
+      bridgeAdmin: *agent
+      depositsEnabled: true
+      withdrawalsEnabled: true
+      depositsEnablers: [*agent]
+      depositsDisablers: [*agent, *l1EmergencyBreaksMultisig]
+      withdrawalsEnablers: [*agent]
+      withdrawalsDisablers: [*agent, *l1EmergencyBreaksMultisig]
+  optimism:
+    tokenRateOracle:
+      proxyAdmin: *l2GovernanceExecutor
+      oracleAdmin: *l2GovernanceExecutor
+      l2Messenger: *l2CrossDomainMessenger
+      tokenRateOutdatedDelay: 86400
+      maxAllowedL2ToL1ClockLag: 86400
+      maxAllowedTokenRateDeviationPerDayBp: 500
+      oldestRateAllowedInPauseTimeSpan: 86400
+      minTimeBetweenTokenRateUpdates: 3600
+      updateEnabled: true
+      updateDisablers: [*l2GovernanceExecutor]
+      updateEnablers: [*l2GovernanceExecutor, *l2EmergencyBreaksMultisig]
+      initialTokenRateValue:
+      initialTokenRateL1Timestamp:
+    nonRebasableToken:
+      proxyAdmin: *l2GovernanceExecutor
+      signingDomainVersion: 1
+    stETH:
+      proxyAdmin: *l2GovernanceExecutor
+      signingDomainVersion: 1
+    tokenBridge:
+      proxyAdmin: *l2GovernanceExecutor
+      bridgeAdmin: *l2GovernanceExecutor
+      depositsEnabled: true
+      withdrawalsEnabled: true
+      depositsEnablers: [*l2GovernanceExecutor]
+      depositsDisablers: [*l2GovernanceExecutor, *l2EmergencyBreaksMultisig]
+      withdrawalsEnablers: [*l2GovernanceExecutor]
+      withdrawalsDisablers: [*l2GovernanceExecutor, *l2EmergencyBreaksMultisig]
+
+
+
+
+
+
