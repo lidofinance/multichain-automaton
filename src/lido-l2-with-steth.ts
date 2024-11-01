@@ -32,14 +32,13 @@ export function populateDeployScriptEnvs(deploymentConfig: any, networkType: Net
     RPC_OPT_SEPOLIA: deploymentConfig["rpcOpt"],
     NETWORK: deploymentConfig["network"],
     FORKING: networkType == NetworkType.Forked ? true : false,
-    GOV_BRIDGE_EXECUTOR: optimismConfig["tokenBridge"]["proxyAdmin"],
-    LIDO: deploymentConfig["ethereum"]["tokenRateNotifier"]["lido"],
+
+    // L1
+    L1_PROXY_ADMIN: ethereumConfig["proxyAdmin"],
+
     ACCOUNTING_ORACLE: ethereumConfig["tokenBridge"]["accountingOracle"],
-
     L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE: deploymentConfig["ethereum"]["opStackTokenRatePusher"]["l2GasLimitForPushingTokenRate"],
-    TOKEN_RATE_NOTIFIER_OWNER: ethereumConfig["tokenRateNotifier"]["tokenRateNotifierOwner"],
 
-    L1_PROXY_ADMIN: ethereumConfig["tokenBridge"]["proxyAdmin"],
     L1_BRIDGE_ADMIN: ethereumConfig["tokenBridge"]["bridgeAdmin"],
     L1_CROSSDOMAIN_MESSENGER: ethereumConfig["tokenBridge"]["messenger"],
     L1_NON_REBASABLE_TOKEN: ethereumConfig["tokenBridge"]["l1NonRebasableToken"],
@@ -50,6 +49,10 @@ export function populateDeployScriptEnvs(deploymentConfig: any, networkType: Net
     L1_DEPOSITS_DISABLERS: formattedArray(ethereumConfig["tokenBridge"]["depositsDisablers"]),
     L1_WITHDRAWALS_ENABLERS: formattedArray(ethereumConfig["tokenBridge"]["withdrawalsEnablers"]),
     L1_WITHDRAWALS_DISABLERS: formattedArray(ethereumConfig["tokenBridge"]["withdrawalsDisablers"]),
+
+    // L2
+    L2_PROXY_ADMIN: optimismConfig["proxyAdmin"],
+    GOV_BRIDGE_EXECUTOR: optimismConfig["tokenBridge"]["proxyAdmin"],
 
     TOKEN_RATE_ORACLE_PROXY_ADMIN: optimismConfig["tokenRateOracle"]["proxyAdmin"],
     TOKEN_RATE_ORACLE_ADMIN: optimismConfig["tokenRateOracle"]["oracleAdmin"],
@@ -64,13 +67,14 @@ export function populateDeployScriptEnvs(deploymentConfig: any, networkType: Net
     INITIAL_TOKEN_RATE_VALUE: optimismConfig["tokenRateOracle"]["initialTokenRateValue"],
     INITIAL_TOKEN_RATE_L1_TIMESTAMP: optimismConfig["tokenRateOracle"]["initialTokenRateL1Timestamp"],
 
-    L2_TOKEN_NON_REBASABLE_PROXY_ADMIN: optimismConfig["nonRebasableToken"]["proxyAdmin"],
+    L2_TOKEN_NON_REBASABLE_NAME: optimismConfig["nonRebasableToken"]["name"],
+    L2_TOKEN_NON_REBASABLE_SYMBOL: optimismConfig["nonRebasableToken"]["symbol"],
     L2_TOKEN_NON_REBASABLE_SIGNING_DOMAIN_VERSION: optimismConfig["nonRebasableToken"]["signingDomainVersion"],
 
-    L2_TOKEN_REBASABLE_PROXY_ADMIN: optimismConfig["rebasableToken"]["proxyAdmin"],
+    L2_TOKEN_REBASABLE_NAME: optimismConfig["rebasableToken"]["name"],
+    L2_TOKEN_REBASABLE_SYMBOL: optimismConfig["rebasableToken"]["symbol"],
     L2_TOKEN_REBASABLE_SIGNING_DOMAIN_VERSION: optimismConfig["rebasableToken"]["signingDomainVersion"],
 
-    L2_PROXY_ADMIN: optimismConfig["tokenBridge"]["proxyAdmin"],
     L2_BRIDGE_ADMIN: optimismConfig["tokenBridge"]["bridgeAdmin"],
     L2_DEPOSITS_ENABLED: optimismConfig["tokenBridge"]["depositsEnabled"],
     L2_WITHDRAWALS_ENABLED: optimismConfig["tokenBridge"]["withdrawalsEnabled"],
@@ -81,7 +85,6 @@ export function populateDeployScriptEnvs(deploymentConfig: any, networkType: Net
 
     L2_CROSSDOMAIN_MESSENGER: optimismConfig["tokenBridge"]["messenger"],
   }, { override: true });
-  console.log("process.env=",process.env);
 }
 
 export function setupL2RepoTests(testingParameters: any, newContractsCfg: any) {

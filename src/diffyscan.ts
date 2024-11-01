@@ -5,18 +5,16 @@ import fs from "node:fs";
 import { Submodules } from "./types";
 
 export function setupDiffyscan(config: any, newContractsCfg: any) {
-  const parsed = {
+  dotenv.populate(process.env, {
     ETHERSCAN_EXPLORER_TOKEN: config["etherscanExplorerToken"],
     OPTISCAN_EXPLORER_TOKEN: config["optiscanExplorerToken"],
     REMOTE_RPC_URL: config["localRpcUrl"],
     LOCAL_RPC_URL: config["localRpcUrl"],
     GITHUB_API_TOKEN: config["githubApiToken"]
-  };
-  dotenv.populate(process.env, parsed);
+  }, { override: true });
 
   // copy 3 configs
   // change them
-
   // ethereum
   const fileNameL1 = './diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L1.json';
   let optimismTestnetConfigL1 = JSON.parse(fs.readFileSync(fileNameL1, 'utf8'));
@@ -41,8 +39,7 @@ export function setupDiffyscan(config: any, newContractsCfg: any) {
     [newContractsCfg["optimism"]["tokenBridgeImplAddress"]]: "L2ERC20ExtendedTokensBridge"
   };
   fs.writeFileSync('./artifacts/configs/optimism_testnet_config_L2.json', JSON.stringify(optimismTestnetConfigL2, null, 2));
-
-  fs.cpSync('./diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L2_gov.json', '/artifacts/configs/optimism_testnet_config_L2_gov.json');
+  fs.copyFileSync('./diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L2_gov.json', './artifacts/configs/optimism_testnet_config_L2_gov.json');
 }
 
 export function runDiffyscan(configName: string) {

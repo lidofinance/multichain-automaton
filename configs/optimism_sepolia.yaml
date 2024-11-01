@@ -1,6 +1,6 @@
 parameters:
-  - &rpcEthRemote L1_RPC_URL
-  - &rpcOptRemote L2_RPC_URL
+  - &rpcEthRemote "https://sepolia.infura.io/v3/"
+  - &rpcOptRemote "https://optimism-sepolia.infura.io/v3/"
   - &rpcEthLocal "http://localhost:8545"
   - &rpcOptLocal "http://localhost:9545"
   - &agent "0x32A0E5828B62AAb932362a4816ae03b860b65e83"
@@ -42,13 +42,13 @@ deployParameters:
   network: sepolia
   forking: true
   ethereum:
+    proxyAdmin: *agent
     opStackTokenRatePusher:
       messenger: *l1CrossDomainMessenger
       wstETH: *wstETH
       accountingOracle: *accountingOracle
       l2GasLimitForPushingTokenRate: 300000
     tokenBridge:
-      proxyAdmin: *agent
       bridgeAdmin: *agent
       messenger: *l1CrossDomainMessenger
       accountingOracle: *accountingOracle
@@ -61,8 +61,8 @@ deployParameters:
       withdrawalsEnablers: [*agent]
       withdrawalsDisablers: [*agent, *l1EmergencyBreaksMultisig]
   optimism:
+    proxyAdmin: *l2GovernanceExecutor
     tokenRateOracle:
-      proxyAdmin: *l2GovernanceExecutor
       oracleAdmin: *l2GovernanceExecutor
       l2Messenger: *l2CrossDomainMessenger
       tokenRateOutdatedDelay: 86400
@@ -76,14 +76,15 @@ deployParameters:
       initialTokenRateValue: 1000000000000000000000000000
       initialTokenRateL1Timestamp: 1719765972
     nonRebasableToken:
-      proxyAdmin: *l2GovernanceExecutor
+      name: "Wrapped liquid staked Ether 2.0"
+      symbol: "wstETH"
       signingDomainVersion: 1
     rebasableToken:
-      proxyAdmin: *l2GovernanceExecutor
+      name: "Liquid staked Ether 2.0"
+      symbol: "stETH"
       signingDomainVersion: 1
     tokenBridge:
       messenger: *l2CrossDomainMessenger
-      proxyAdmin: *l2GovernanceExecutor
       bridgeAdmin: *l2GovernanceExecutor
       depositsEnabled: true
       withdrawalsEnabled: true

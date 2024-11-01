@@ -36,7 +36,7 @@ async function main() {
   const diffyscanConfig = config["diffyscan"];
 
   var ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545);
-  var optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 9545);
+  var optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545);
 
   populateDeployScriptEnvs(deploymentConfig, NetworkType.Forked);
   runDeployScript();
@@ -92,8 +92,8 @@ async function main() {
 
   // run forks
   // run l2 test on them
-  ethNode = await spawnTestNode(readUrlOrFromEnv(config["rpcEth"]), 8545);
-  optNode = await spawnTestNode(readUrlOrFromEnv(config["rpcOpt"]), 9545);
+  ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545);
+  optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545);
 
   setupL2RepoTests(testingParameters, newContractsCfgRemote);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
