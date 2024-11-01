@@ -1,6 +1,3 @@
-rpcEth: https://sepolia.infura.io/v3/
-rpcOpt: https://optimism-sepolia.infura.io/v3/
-
 parameters:
   - &rpcEthRemote "https://sepolia.infura.io/v3/"
   - &rpcOptRemote "https://optimism-sepolia.infura.io/v3/"
@@ -21,23 +18,22 @@ testingParameters:
   lido: *lido
   accountingOracle: *accountingOracle
   tokenRateNotifier: "0x10cA9008D7dcea1Bed4d5394F8c58F3113A2814D"
-  #opStackTokenRatePusher: ""
   l1NonRebasableToken: *wstETH
   l1RebasableToken: *stETH
   l1TokensHolder: "0xCDE580933C37Ed0d77c999454ab8728f3dCF2854"
   l2GovernanceExecutor: *l2GovernanceExecutor
 
 statemate:
-  rpcEthLocal: *rpcEthLocal
   rpcEthRemote: *rpcEthRemote
-  rpcOptLocal: *rpcOptLocal
+  rpcEthLocal: *rpcEthLocal
   rpcOptRemote: *rpcOptRemote
+  rpcOptLocal: *rpcOptLocal
 
 diffyscan:
   etherscanExplorerToken: ""
   optiscanExplorerToken: ""
-  remoteRpcUrl: "https://sepolia.infura.io/v3/"
-  localRpcUrl: "http://localhost:8545"
+  remoteRpcUrl: *rpcEthRemote
+  localRpcUrl: *rpcEthLocal
   githubApiToken: ""
 
 deployParameters:
@@ -46,9 +42,6 @@ deployParameters:
   network: sepolia
   forking: true
   ethereum:
-    tokenRateNotifier:
-      lido: *lido
-      tokenRateNotifierOwner: *agent
     opStackTokenRatePusher:
       messenger: *l1CrossDomainMessenger
       wstETH: *wstETH

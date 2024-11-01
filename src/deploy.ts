@@ -34,8 +34,8 @@ async function main() {
   const testingParameters = config["testingParameters"];
   const diffyscanConfig = config["diffyscan"];
 
-  var ethNode = await spawnTestNode(config["rpcEth"], 8545);
-  var optNode = await spawnTestNode(config["rpcOpt"], 9545);
+  var ethNode = await spawnTestNode(deploymentConfig["rpcEth"], 8545);
+  var optNode = await spawnTestNode(deploymentConfig["rpcOpt"], 9545);
 
   populateDeployScriptEnvs(deploymentConfig, NetworkType.Forked);
   runDeployScript();
