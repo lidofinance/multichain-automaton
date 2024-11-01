@@ -18,12 +18,11 @@ export function runDeployScript() {
   });
 }
 
-export function populateDeployScriptEnvs(deploymentConfig: any, networkType: NetworkType) {
+export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecutor: string, networkType: NetworkType) {
 
   function formattedArray(configArray: Array<string>) {
     return `[${configArray.map((ts: string) => `"${ts.toString()}"`)}]`;
   }
-
   const ethereumConfig = deploymentConfig["ethereum"];
   const optimismConfig = deploymentConfig["optimism"];
 
@@ -51,14 +50,13 @@ export function populateDeployScriptEnvs(deploymentConfig: any, networkType: Net
     L1_WITHDRAWALS_DISABLERS: formattedArray(ethereumConfig["tokenBridge"]["withdrawalsDisablers"]),
 
     // L2
-    L2_PROXY_ADMIN: optimismConfig["proxyAdmin"],
-    GOV_BRIDGE_EXECUTOR: optimismConfig["tokenBridge"]["proxyAdmin"],
+    L2_PROXY_ADMIN: govBridgeExecutor,
 
-    TOKEN_RATE_ORACLE_PROXY_ADMIN: optimismConfig["tokenRateOracle"]["proxyAdmin"],
+    TOKEN_RATE_ORACLE_PROXY_ADMIN: govBridgeExecutor,
     TOKEN_RATE_ORACLE_ADMIN: optimismConfig["tokenRateOracle"]["oracleAdmin"],
     TOKEN_RATE_UPDATE_ENABLED: optimismConfig["tokenRateOracle"]["updateEnabled"],
-    TOKEN_RATE_UPDATE_ENABLERS: formattedArray(optimismConfig["tokenRateOracle"]["updateEnablers"]),
-    TOKEN_RATE_UPDATE_DISABLERS: formattedArray(optimismConfig["tokenRateOracle"]["updateDisablers"]),
+    TOKEN_RATE_UPDATE_ENABLERS: formattedArray([...optimismConfig["tokenRateOracle"]["updateEnablers"], govBridgeExecutor]),
+    TOKEN_RATE_UPDATE_DISABLERS: formattedArray([...optimismConfig["tokenRateOracle"]["updateDisablers"], govBridgeExecutor]),
     TOKEN_RATE_OUTDATED_DELAY: optimismConfig["tokenRateOracle"]["tokenRateOutdatedDelay"],
     MAX_ALLOWED_L2_TO_L1_CLOCK_LAG: optimismConfig["tokenRateOracle"]["maxAllowedL2ToL1ClockLag"],
     MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP: optimismConfig["tokenRateOracle"]["maxAllowedTokenRateDeviationPerDayBp"],
@@ -75,16 +73,17 @@ export function populateDeployScriptEnvs(deploymentConfig: any, networkType: Net
     L2_TOKEN_REBASABLE_SYMBOL: optimismConfig["rebasableToken"]["symbol"],
     L2_TOKEN_REBASABLE_SIGNING_DOMAIN_VERSION: optimismConfig["rebasableToken"]["signingDomainVersion"],
 
-    L2_BRIDGE_ADMIN: optimismConfig["tokenBridge"]["bridgeAdmin"],
+    L2_BRIDGE_ADMIN: govBridgeExecutor,
     L2_DEPOSITS_ENABLED: optimismConfig["tokenBridge"]["depositsEnabled"],
     L2_WITHDRAWALS_ENABLED: optimismConfig["tokenBridge"]["withdrawalsEnabled"],
-    L2_DEPOSITS_ENABLERS: formattedArray(optimismConfig["tokenBridge"]["depositsEnablers"]),
-    L2_DEPOSITS_DISABLERS: formattedArray(optimismConfig["tokenBridge"]["depositsDisablers"]),
-    L2_WITHDRAWALS_ENABLERS: formattedArray(optimismConfig["tokenBridge"]["withdrawalsEnablers"]),
-    L2_WITHDRAWALS_DISABLERS: formattedArray(optimismConfig["tokenBridge"]["withdrawalsDisablers"]),
+    L2_DEPOSITS_ENABLERS: formattedArray([...optimismConfig["tokenBridge"]["depositsEnablers"], govBridgeExecutor]),
+    L2_DEPOSITS_DISABLERS: formattedArray([...optimismConfig["tokenBridge"]["depositsDisablers"], govBridgeExecutor]),
+    L2_WITHDRAWALS_ENABLERS: formattedArray([...optimismConfig["tokenBridge"]["withdrawalsEnablers"], govBridgeExecutor]),
+    L2_WITHDRAWALS_DISABLERS: formattedArray([...optimismConfig["tokenBridge"]["withdrawalsDisablers"], govBridgeExecutor]),
 
     L2_CROSSDOMAIN_MESSENGER: optimismConfig["tokenBridge"]["messenger"],
   }, { override: true });
+  console.log("process.env=",process.env);
 }
 
 export function setupL2RepoTests(testingParameters: any, newContractsCfg: any) {

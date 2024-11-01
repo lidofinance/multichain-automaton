@@ -23,11 +23,11 @@ testingParameters:
   l1TokensHolder: "0xCDE580933C37Ed0d77c999454ab8728f3dCF2854"
   l2GovernanceExecutor: *l2GovernanceExecutor
 
-statemate:
-  rpcEthRemote: *rpcEthRemote
-  rpcEthLocal: *rpcEthLocal
-  rpcOptRemote: *rpcOptRemote
-  rpcOptLocal: *rpcOptLocal
+rpcUrls:
+  ethRemote: *rpcEthRemote
+  ethLocal: *rpcEthLocal
+  optRemote: *rpcOptRemote
+  optLocal: *rpcOptLocal
 
 diffyscan:
   etherscanExplorerToken: ""
@@ -62,6 +62,14 @@ deployParameters:
       withdrawalsDisablers: [*agent, *l1EmergencyBreaksMultisig]
   optimism:
     proxyAdmin: *l2GovernanceExecutor
+    govBridgeExecutor:
+      ovmL2Messenger: "0x4200000000000000000000000000000000000007"
+      ethereumGovExecutor: "0x58Cc85b8D04EA49cC6DBd3CbFFd00B4B8D6cb3ef"
+      delay: 0
+      gracePeriod: 86400
+      minDelay: 0
+      maxDelay: 1
+      ovmGuiardian: "0x0000000000000000000000000000000000000000"
     tokenRateOracle:
       oracleAdmin: *l2GovernanceExecutor
       l2Messenger: *l2CrossDomainMessenger
@@ -71,8 +79,8 @@ deployParameters:
       oldestRateAllowedInPauseTimeSpan: 86400
       minTimeBetweenTokenRateUpdates: 3600
       updateEnabled: true
-      updateEnablers: [*l2GovernanceExecutor]
-      updateDisablers: [*l2GovernanceExecutor, *l2EmergencyBreaksMultisig]
+      updateEnablers: []
+      updateDisablers: [*l2EmergencyBreaksMultisig]
       initialTokenRateValue: 1000000000000000000000000000
       initialTokenRateL1Timestamp: 1719765972
     nonRebasableToken:
@@ -88,10 +96,10 @@ deployParameters:
       bridgeAdmin: *l2GovernanceExecutor
       depositsEnabled: true
       withdrawalsEnabled: true
-      depositsEnablers: [*l2GovernanceExecutor]
-      depositsDisablers: [*l2GovernanceExecutor, *l2EmergencyBreaksMultisig]
-      withdrawalsEnablers: [*l2GovernanceExecutor]
-      withdrawalsDisablers: [*l2GovernanceExecutor, *l2EmergencyBreaksMultisig]
+      depositsEnablers: []
+      depositsDisablers: [*l2EmergencyBreaksMultisig]
+      withdrawalsEnablers: []
+      withdrawalsDisablers: [*l2EmergencyBreaksMultisig]
 
 
 

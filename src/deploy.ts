@@ -9,6 +9,7 @@ import { JsonRpcProvider } from 'ethers'
 import { runDeployScript, populateDeployScriptEnvs, setupL2RepoTests, runIntegrationTest, copyDeploymentArtifacts, newContractsConfig } from './lido-l2-with-steth';
 import { runDiffyscan, setupDiffyscan } from './diffyscan';
 import { setupStateMateConfig, runStateMate, setupStateMateEnvs } from './state-mate';
+import { deployGovExecutor } from './gov-executor';
 import { NetworkType } from './types';
 import { program } from "commander";
 
@@ -24,13 +25,21 @@ function parseCmdLineArgs() {
   return { configPath };
 }
 
+function ethereumRpc(rpcUrls: any, networkType: NetworkType) {
+  return networkType == NetworkType.Forked ? rpcUrls["ethLocal"] : rpcUrls["ethRemote"];
+}
+
+function optimismRpc(rpcUrls: any, networkType: NetworkType) {
+  return networkType == NetworkType.Forked ? rpcUrls["optLocal"] : rpcUrls["optRemote"];
+}
+
 async function main() {
   console.log("start");
 
   const { configPath } = parseCmdLineArgs();
 
   const config = loadYamlConfig(configPath);
-  const statemateConfig = config["statemate"];
+  const rpcUrls = config["rpcUrls"];
   const deploymentConfig = config["deployParameters"];
   const testingParameters = config["testingParameters"];
   const diffyscanConfig = config["diffyscan"];
@@ -38,13 +47,18 @@ async function main() {
   var ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545);
   var optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545);
 
-  populateDeployScriptEnvs(deploymentConfig, NetworkType.Forked);
+  const govBridgeExecutor = await deployGovExecutor(deploymentConfig, optimismRpc(rpcUrls, NetworkType.Forked));
+
+  populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Forked);  
   runDeployScript();
   copyDeploymentArtifacts('deployResult.json','deployResultForkedNetwork.json');
   const newContractsCfgForked = newContractsConfig('deployResultForkedNetwork.json');
 
-  setupStateMateEnvs(statemateConfig, NetworkType.Forked);
-  setupStateMateConfig('automaton-sepolia-testnet.yaml', newContractsCfgForked, NetworkType.Forked);
+  setupStateMateEnvs(
+    ethereumRpc(rpcUrls, NetworkType.Forked),
+    optimismRpc(rpcUrls, NetworkType.Forked)
+  );
+  setupStateMateConfig('automaton-sepolia-testnet.yaml', newContractsCfgForked, govBridgeExecutor, NetworkType.Forked);
   runStateMate('automaton-sepolia-testnet.yaml');
 
   setupL2RepoTests(testingParameters, newContractsCfgForked);
@@ -52,12 +66,12 @@ async function main() {
   runIntegrationTest("bridging-rebasable.integration.test.ts");
   runIntegrationTest('op-pusher-pushing-token-rate.integration.test.ts');
   runIntegrationTest('optimism.integration.test.ts');
-
+  
   ethNode.process.kill();
   optNode.process.kill();
 
   // deploy to the real network
-  populateDeployScriptEnvs(deploymentConfig, NetworkType.Real);
+  populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Real);
   runDeployScript();
   copyDeploymentArtifacts('deployResult.json','deployResultRealNetwork.json');
   const newContractsCfgReal = newContractsConfig('deployResultRealNetwork.json');
@@ -80,8 +94,11 @@ async function main() {
       "tokenRateOracleProxyAddress": "0xB34F2747BCd9BCC4107A0ccEb43D5dcdd7Fabf89"
     }
   }
-  setupStateMateEnvs(statemateConfig, NetworkType.Real);
-  setupStateMateConfig('automaton-sepolia-testnet.yaml', newContractsCfgRemote, NetworkType.Real);
+  setupStateMateEnvs(
+    ethereumRpc(rpcUrls, NetworkType.Real),
+    optimismRpc(rpcUrls, NetworkType.Real)
+  );
+  setupStateMateConfig('automaton-sepolia-testnet.yaml', newContractsCfgRemote, govBridgeExecutor, NetworkType.Real);
   runStateMate('automaton-sepolia-testnet.yaml');
 
   // diffyscan + bytecode on real
@@ -106,7 +123,9 @@ async function main() {
 }
 
 main().catch((error) => {
-  logError(error);
+//  logError(error);
+  console.error(error);
+
   process.exitCode = 1;
 });
 

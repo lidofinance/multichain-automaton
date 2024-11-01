@@ -10,3 +10,6 @@
 	path = diffyscan
 	url = https://github.com/lidofinance/diffyscan
     branch = cfg/optimism_testnet_fix
+[submodule "governance-crosschain-bridges"]
+	path = governance-crosschain-bridges
+	url = https://github.com/lidofinance/governance-crosschain-bridges

@@ -6,25 +6,16 @@ import process from "node:process";
 import { NetworkType } from './types';
 const dotenv = require('dotenv');
 
-export function setupStateMateEnvs(config: any, networkType: NetworkType) {
-  if (networkType == NetworkType.Real) {
+export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
     dotenv.populate(process.env, {
-      L1_TESTNET_RPC_URL: config["rpcEthRemote"],
-      L2_TESTNET_RPC_URL: config["rpcOptRemote"],
-      L1_MAINNET_RPC_URL: config["rpcEthRemote"],
-      L2_MAINNET_RPC_URL: config["rpcOptRemote"],
+      L1_TESTNET_RPC_URL: ethereumRpcUrl,
+      L2_TESTNET_RPC_URL: optimismRpcUrl,
+      L1_MAINNET_RPC_URL: ethereumRpcUrl,
+      L2_MAINNET_RPC_URL: optimismRpcUrl,
     }, { override: true });
-  } else {
-    dotenv.populate(process.env, {
-      L1_TESTNET_RPC_URL: config["rpcEthLocal"],
-      L2_TESTNET_RPC_URL: config["rpcOptLocal"],
-      L1_MAINNET_RPC_URL: config["rpcEthLocal"],
-      L2_MAINNET_RPC_URL: config["rpcOptLocal"],
-    }), { override: true };
-  }
 }
 
-export function setupStateMateConfig(configName: string, newContractsCfg: any, networkType: NetworkType) {
+export function setupStateMateConfig(configName: string, newContractsCfg: any, govBridgeExecutor: string, networkType: NetworkType) {
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {
     return sectionEntries.find((addr) => addr.anchor == anchor)  as YAML.Scalar;
   }
@@ -42,6 +33,7 @@ export function setupStateMateConfig(configName: string, newContractsCfg: any, n
 
   const l2Section = deployedSection.get("l2") as YAML.YAMLSeq;
   const l2SectionEntries = l2Section.items as [YAML.Scalar];
+  item("l2GovernanceExecutor",l2SectionEntries).value = govBridgeExecutor;
   item("l2TokenBridge",l2SectionEntries).value = newContractsCfg["optimism"]["tokenBridgeProxyAddress"];
   item("l2TokenBridgeImpl",l2SectionEntries).value = newContractsCfg["optimism"]["tokenBridgeImplAddress"];
   item("l2WstETH",l2SectionEntries).value = newContractsCfg["optimism"]["tokenProxyAddress"];
