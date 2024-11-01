@@ -45,7 +45,7 @@ export function setupDiffyscan(config: any, newContractsCfg: any) {
   fs.cpSync('./diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L2_gov.json', '/artifacts/configs/optimism_testnet_config_L2_gov.json');
 }
 
-export function runDiffiscan(configName: string) {
+export function runDiffyscan(configName: string) {
   const nodeCmd = 'diffyscan';
   const nodeArgs = [
     `../artifacts/configs/${configName}`

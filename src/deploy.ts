@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import fs from "node:fs";
 import path from "node:path";
 import * as child_process from 'node:child_process'
@@ -6,7 +7,7 @@ import process from "node:process";
 import * as YAML from "yaml";
 import { JsonRpcProvider } from 'ethers'
 import { runDeployScript, populateDeployScriptEnvs, setupL2RepoTests, runIntegrationTest, copyDeploymentArtifacts, newContractsConfig } from './lido-l2-with-steth';
-import { runDiffiscan, setupDiffyscan } from './diffyscan';
+import { runDiffyscan, setupDiffyscan } from './diffyscan';
 import { setupStateMateConfig, runStateMate, setupStateMateEnvs } from './state-mate';
 import { NetworkType } from './types';
 import { program } from "commander";
@@ -34,8 +35,8 @@ async function main() {
   const testingParameters = config["testingParameters"];
   const diffyscanConfig = config["diffyscan"];
 
-  var ethNode = await spawnTestNode(deploymentConfig["rpcEth"], 8545);
-  var optNode = await spawnTestNode(deploymentConfig["rpcOpt"], 9545);
+  var ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545);
+  var optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 9545);
 
   populateDeployScriptEnvs(deploymentConfig, NetworkType.Forked);
   runDeployScript();
@@ -45,7 +46,7 @@ async function main() {
   setupStateMateEnvs(statemateConfig, NetworkType.Forked);
   setupStateMateConfig('automaton-sepolia-testnet.yaml', newContractsCfgForked, NetworkType.Forked);
   runStateMate('automaton-sepolia-testnet.yaml');
-  
+
   setupL2RepoTests(testingParameters, newContractsCfgForked);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
   runIntegrationTest("bridging-rebasable.integration.test.ts");
@@ -85,14 +86,14 @@ async function main() {
 
   // diffyscan + bytecode on real
   setupDiffyscan(diffyscanConfig, newContractsCfgRemote);
-  runDiffiscan('optimism_testnet_config_L1.json');
-  runDiffiscan('optimism_testnet_config_L2_gov.json');
-  runDiffiscan('optimism_testnet_config_L2.json');
+  runDiffyscan('optimism_testnet_config_L1.json');
+  runDiffyscan('optimism_testnet_config_L2_gov.json');
+  runDiffyscan('optimism_testnet_config_L2.json');
 
   // run forks
   // run l2 test on them
-  ethNode = await spawnTestNode(config["rpcEth"], 8545);
-  optNode = await spawnTestNode(config["rpcOpt"], 9545);
+  ethNode = await spawnTestNode(readUrlOrFromEnv(config["rpcEth"]), 8545);
+  optNode = await spawnTestNode(readUrlOrFromEnv(config["rpcOpt"]), 9545);
 
   setupL2RepoTests(testingParameters, newContractsCfgRemote);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
@@ -123,6 +124,32 @@ function loadYamlConfig(stateFile: string) {
   };
 
   return YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true });
+}
+
+function isUrl(maybeUrl: string) {
+  try {
+    new URL(maybeUrl);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function logErrorAndExit(arg: unknown) {
+  logError(arg);
+  process.exit(1);
+}
+
+function readUrlOrFromEnv(urlOrEnvVarName: string) {
+  if (isUrl(urlOrEnvVarName)) {
+    return urlOrEnvVarName;
+  } else {
+    const valueFromEnv = process.env[urlOrEnvVarName] || "";
+    if (!isUrl(valueFromEnv)) {
+      logErrorAndExit(`Value "${valueFromEnv}" from env var "${urlOrEnvVarName}" is not a valid RPC url`);
+    }
+    return valueFromEnv;
+  }
 }
 
 export async function spawnTestNode(rpcUrl: string, port: number): Promise<TestNode> {

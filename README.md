@@ -14,7 +14,7 @@ Pull all github submodules.
 git submodule update --init
 ```
 
-Go to each submodule and install its dependecies.
+Go to each submodule and install its dependencies.
 
 ## Usage
 
@@ -30,7 +30,7 @@ export OPT_DEPLOYER_PRIVATE_KEY=<opt-deployer-private-key>
 ```
 
 
-Run script 
+Run script
 
 ```bash
 yarn start ./path/to/config.yaml

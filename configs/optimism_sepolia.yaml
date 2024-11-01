@@ -1,6 +1,6 @@
 parameters:
-  - &rpcEthRemote "https://sepolia.infura.io/v3/"
-  - &rpcOptRemote "https://optimism-sepolia.infura.io/v3/"
+  - &rpcEthRemote L1_RPC_URL
+  - &rpcOptRemote L2_RPC_URL
   - &rpcEthLocal "http://localhost:8545"
   - &rpcOptLocal "http://localhost:9545"
   - &agent "0x32A0E5828B62AAb932362a4816ae03b860b65e83"
