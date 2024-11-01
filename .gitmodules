@@ -1,9 +1,12 @@
 [submodule "lido-l2-with-steth"]
 	path = lido-l2-with-steth
 	url = https://github.com/lidofinance/lido-l2-with-steth
+    branch = feature/automaton-deploy-script
 [submodule "state-mate"]
 	path = state-mate
 	url = https://github.com/lidofinance/state-mate
+    branch = cgf/automaton-config
 [submodule "diffyscan"]
 	path = diffyscan
 	url = https://github.com/lidofinance/diffyscan
+    branch = cfg/optimism_testnet_fix
