@@ -15,7 +15,14 @@ export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: strin
     }, { override: true });
 }
 
-export function setupStateMateConfig(configName: string, newContractsCfg: any, govBridgeExecutor: string, networkType: NetworkType) {
+export function setupStateMateConfig(
+  configName: string,
+  newContractsCfg: any,
+  statemateConfig: any,
+  chainId: bigint,
+  govBridgeExecutor: string,
+  networkType: NetworkType
+) {
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {
     return sectionEntries.find((addr) => addr.anchor == anchor)  as YAML.Scalar;
   }
@@ -23,6 +30,11 @@ export function setupStateMateConfig(configName: string, newContractsCfg: any, g
   const seedConfigPath = `./state-mate/configs/optimism/${configName}`;
   const seedDoc = YAML.parseDocument(fs.readFileSync(seedConfigPath, "utf-8"), {intAsBigInt: true});
   const doc = new YAML.Document(seedDoc);
+
+  const parametersSection = doc.get("parameters") as YAML.YAMLSeq;
+  const parametersSectionEntries = parametersSection.items as [YAML.Scalar];
+  item("l1CrossDomainMessenger", parametersSectionEntries).value = statemateConfig["l1CrossDomainMessenger"];
+
   const deployedSection = doc.get("deployed") as YAML.YAMLMap;
 
   const l1Section = deployedSection.get("l1") as YAML.YAMLSeq;
@@ -56,7 +68,7 @@ export function setupStateMateConfig(configName: string, newContractsCfg: any, g
     const checks = stETH.get("checks") as YAML.YAMLMap;
     const name = checks.get("name") as string;
     const version = "1";//checks.get("getContractVersion") as YAML.Scalar;
-    const chainId = networkType == NetworkType.Real ? 11155420 : 31337;
+    //const chainId = networkType == NetworkType.Real ? 11155420 : 31337;
     const wstETHDomainSeparator = domainSeparator(name, version, chainId, address);
     checks.set("DOMAIN_SEPARATOR", wstETHDomainSeparator);
   }
@@ -83,7 +95,7 @@ export function runStateMate(configFile: string) {
   });
 }
 
-function domainSeparator(name: string, version: string, chainid: number, addr: string) {
+function domainSeparator(name: string, version: string, chainid: bigint, addr: string) {
   const hashedName = ethers.keccak256(ethers.toUtf8Bytes(name));
   const hashedVersion = ethers.keccak256(ethers.toUtf8Bytes(version));
   const typeHash = ethers.keccak256(ethers.toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"));

@@ -27,8 +27,11 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   const optimismConfig = deploymentConfig["optimism"];
 
   dotenv.populate(process.env, {
-    RPC_ETH_SEPOLIA: deploymentConfig["rpcEth"],
-    RPC_OPT_SEPOLIA: deploymentConfig["rpcOpt"],
+    ETH_DEPLOYER_PRIVATE_KEY: process.env.L1_DEPLOYER_PRIVATE_KEY,
+    OPT_DEPLOYER_PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY,
+
+    RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL,
+    RPC_OPT_SEPOLIA: process.env.L1_REMOTE_RPC_URL,
     NETWORK: deploymentConfig["network"],
     FORKING: networkType == NetworkType.Forked ? true : false,
 
@@ -86,7 +89,7 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   console.log("process.env=",process.env);
 }
 
-export function setupL2RepoTests(testingParameters: any, newContractsCfg: any) {
+export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: string, newContractsCfg: any) {
   dotenv.populate(process.env, {
     TESTING_OPT_NETWORK: "sepolia",
     TESTING_USE_DEPLOYED_CONTRACTS: true,
@@ -95,7 +98,7 @@ export function setupL2RepoTests(testingParameters: any, newContractsCfg: any) {
     TESTING_OPT_L1_NON_REBASABLE_TOKEN: testingParameters["l1NonRebasableToken"],
     TESTING_OPT_L1_ACCOUNTING_ORACLE: testingParameters["accountingOracle"],
     TESTING_L1_TOKENS_HOLDER: testingParameters["l1TokensHolder"],
-    TESTING_OPT_GOV_BRIDGE_EXECUTOR: testingParameters["l2GovernanceExecutor"],
+    TESTING_OPT_GOV_BRIDGE_EXECUTOR: govBridgeExecutor,
     TESTING_OPT_L1_ERC20_TOKEN_BRIDGE: newContractsCfg["ethereum"]["bridgeProxyAddress"],
     TESTING_OPT_L1_TOKEN_RATE_NOTIFIER: testingParameters["tokenRateNotifier"],
     TESTING_OPT_L1_OP_STACK_TOKEN_RATE_PUSHER: newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"],

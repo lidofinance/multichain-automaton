@@ -4,13 +4,13 @@ import process from "node:process";
 import fs from "node:fs";
 import { Submodules } from "./types";
 
-export function setupDiffyscan(config: any, newContractsCfg: any) {
+export function setupDiffyscan(newContractsCfg: any) {
   dotenv.populate(process.env, {
-    ETHERSCAN_EXPLORER_TOKEN: config["etherscanExplorerToken"],
-    OPTISCAN_EXPLORER_TOKEN: config["optiscanExplorerToken"],
-    REMOTE_RPC_URL: config["localRpcUrl"],
-    LOCAL_RPC_URL: config["localRpcUrl"],
-    GITHUB_API_TOKEN: config["githubApiToken"]
+    ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN,
+    OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN,
+    REMOTE_RPC_URL: process.env.L1_REMOTE_RPC_URL,
+    LOCAL_RPC_URL: process.env.L1_LOCAL_RPC_URL,
+    GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN
   }, { override: true });
 
   // copy 3 configs

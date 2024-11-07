@@ -12,6 +12,8 @@ import { setupStateMateConfig, runStateMate, setupStateMateEnvs } from './state-
 import { deployGovExecutor } from './gov-executor';
 import { NetworkType } from './types';
 import { program } from "commander";
+import { ethers } from 'ethers'
+const {once} = require('stream')
 
 export type ChildProcess = child_process.ChildProcessWithoutNullStreams
 export type TestNode = { process: ChildProcess, rpcUrl: string }
@@ -25,29 +27,31 @@ function parseCmdLineArgs() {
   return { configPath };
 }
 
-function ethereumRpc(rpcUrls: any, networkType: NetworkType) {
-  return networkType == NetworkType.Forked ? rpcUrls["ethLocal"] : rpcUrls["ethRemote"];
+function ethereumRpc(networkType: NetworkType) {
+  return networkType == NetworkType.Forked ? process.env.L1_LOCAL_RPC_URL! : process.env.L1_REMOTE_RPC_URL!;
 }
 
-function optimismRpc(rpcUrls: any, networkType: NetworkType) {
-  return networkType == NetworkType.Forked ? rpcUrls["optLocal"] : rpcUrls["optRemote"];
+function optimismRpc(networkType: NetworkType) {
+  return networkType == NetworkType.Forked ? process.env.L2_LOCAL_RPC_URL! : process.env.L2_REMOTE_RPC_URL!;
 }
 
 async function main() {
   console.log("start");
-
+  
   const { configPath } = parseCmdLineArgs();
 
   const config = loadYamlConfig(configPath);
-  const rpcUrls = config["rpcUrls"];
   const deploymentConfig = config["deployParameters"];
   const testingParameters = config["testingParameters"];
-  const diffyscanConfig = config["diffyscan"];
+  const statemateConfig = config["statemate"];
 
-  var ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545);
-  var optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545);
+  var ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
+  var optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
 
-  const govBridgeExecutor = await deployGovExecutor(deploymentConfig, optimismRpc(rpcUrls, NetworkType.Forked));
+  const optProvider = new ethers.JsonRpcProvider(optimismRpc(NetworkType.Forked));
+  const { chainId } = await optProvider.getNetwork();
+
+  const govBridgeExecutor = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Forked)!);
 
   populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Forked);  
   runDeployScript();
@@ -55,13 +59,20 @@ async function main() {
   const newContractsCfgForked = newContractsConfig('deployResultForkedNetwork.json');
 
   setupStateMateEnvs(
-    ethereumRpc(rpcUrls, NetworkType.Forked),
-    optimismRpc(rpcUrls, NetworkType.Forked)
+    ethereumRpc(NetworkType.Forked),
+    optimismRpc(NetworkType.Forked)
   );
-  setupStateMateConfig('automaton-sepolia-testnet.yaml', newContractsCfgForked, govBridgeExecutor, NetworkType.Forked);
+  setupStateMateConfig(
+    'automaton-sepolia-testnet.yaml',
+    newContractsCfgForked,
+    statemateConfig,
+    chainId,
+    govBridgeExecutor,
+    NetworkType.Forked
+  );
   runStateMate('automaton-sepolia-testnet.yaml');
 
-  setupL2RepoTests(testingParameters, newContractsCfgForked);
+  setupL2RepoTests(testingParameters, govBridgeExecutor, newContractsCfgForked);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
   runIntegrationTest("bridging-rebasable.integration.test.ts");
   runIntegrationTest('op-pusher-pushing-token-rate.integration.test.ts');
@@ -95,24 +106,31 @@ async function main() {
     }
   }
   setupStateMateEnvs(
-    ethereumRpc(rpcUrls, NetworkType.Real),
-    optimismRpc(rpcUrls, NetworkType.Real)
+    ethereumRpc(NetworkType.Real),
+    optimismRpc(NetworkType.Real)
   );
-  setupStateMateConfig('automaton-sepolia-testnet.yaml', newContractsCfgRemote, govBridgeExecutor, NetworkType.Real);
+  setupStateMateConfig(
+    'automaton-sepolia-testnet.yaml',
+    newContractsCfgRemote,
+    statemateConfig,
+    chainId,
+    govBridgeExecutor,
+    NetworkType.Real
+  );
   runStateMate('automaton-sepolia-testnet.yaml');
 
   // diffyscan + bytecode on real
-  setupDiffyscan(diffyscanConfig, newContractsCfgRemote);
+  setupDiffyscan(newContractsCfgRemote);
   runDiffyscan('optimism_testnet_config_L1.json');
   runDiffyscan('optimism_testnet_config_L2_gov.json');
   runDiffyscan('optimism_testnet_config_L2.json');
 
   // run forks
   // run l2 test on them
-  ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545);
-  optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545);
+  ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545, "l1ForkAfterDeployOutput.txt");
+  optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545, "l2ForkAfterDeployOutput.txt");
 
-  setupL2RepoTests(testingParameters, newContractsCfgRemote);
+  setupL2RepoTests(testingParameters, govBridgeExecutor, newContractsCfgRemote);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
   runIntegrationTest("bridging-rebasable.integration.test.ts");
   runIntegrationTest('op-pusher-pushing-token-rate.integration.test.ts');
@@ -123,17 +141,9 @@ async function main() {
 }
 
 main().catch((error) => {
-//  logError(error);
   console.error(error);
-
   process.exitCode = 1;
 });
-
-function logError(arg: unknown) {
-  console.error(`ERROR: ${arg}`);
-  console.error();
-  console.trace();
-}
 
 function loadYamlConfig(stateFile: string) {
   const file = path.resolve(stateFile);
@@ -154,6 +164,12 @@ function isUrl(maybeUrl: string) {
   }
 }
 
+function logError(arg: unknown) {
+  console.error(`ERROR: ${arg}`);
+  console.error();
+  console.trace();
+}
+
 function logErrorAndExit(arg: unknown) {
   logError(arg);
   process.exit(1);
@@ -171,18 +187,18 @@ function readUrlOrFromEnv(urlOrEnvVarName: string) {
   }
 }
 
-export async function spawnTestNode(rpcUrl: string, port: number): Promise<TestNode> {
-  const nodeCmd = 'hardhat'
+export async function spawnTestNode(rpcUrl: string, port: number, outputFileName: string) {
+  const nodeCmd = 'anvil'
   const nodeArgs = [
-    'node',
-    '--fork', `${rpcUrl}`,
-    '--port', `${port}`,
+    '--fork-url', `${rpcUrl}`,
+    '-p', `${port}`,
   ]
-  const process = child_process.spawn(nodeCmd, nodeArgs)
 
-  process.stderr.on('data', (data: unknown) => {
-    console.error(`${nodeCmd}'s stderr: ${data}`)
-  })
+  const output = fs.createWriteStream(`./artifacts/${outputFileName}`);
+  await once(output, 'open');
+
+  const process = child_process.spawn(nodeCmd, nodeArgs, { stdio: ['ignore', output, output] });
+  console.debug(`\nSpawning test node: ${nodeCmd} ${nodeArgs.join(' ')}`)
 
   const localhost = `http://localhost:${port}`
   const provider = new JsonRpcProvider(localhost)
@@ -194,7 +210,7 @@ export async function spawnTestNode(rpcUrl: string, port: number): Promise<TestN
       await provider.getBlock('latest') // check RPC is healthy
       rpcError = undefined
     } catch (e: any) {
-      await new Promise((r) => setTimeout(r, 500))
+      await new Promise((r) => setTimeout(r, 1000))
       rpcError = e
     }
   }
