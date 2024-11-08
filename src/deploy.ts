@@ -120,8 +120,9 @@ async function main() {
   runStateMate('automaton-sepolia-testnet.yaml');
 
   // diffyscan + bytecode on real
-  setupDiffyscan(newContractsCfgRemote);
+  setupDiffyscan(newContractsCfgRemote, process.env.L1_REMOTE_RPC_URL!);
   runDiffyscan('optimism_testnet_config_L1.json');
+  setupDiffyscan(newContractsCfgRemote, process.env.L2_REMOTE_RPC_URL!);
   runDiffyscan('optimism_testnet_config_L2_gov.json');
   runDiffyscan('optimism_testnet_config_L2.json');
 

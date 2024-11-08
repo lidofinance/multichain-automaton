@@ -2,19 +2,17 @@ const dotenv = require('dotenv')
 import * as child_process from 'node:child_process'
 import process from "node:process";
 import fs from "node:fs";
-import { Submodules } from "./types";
+import { Submodules } from "./types"; 
 
-export function setupDiffyscan(newContractsCfg: any) {
+export function setupDiffyscan(newContractsCfg: any, remoteRpcUrl: string) {
   dotenv.populate(process.env, {
     ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN,
     OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN,
-    REMOTE_RPC_URL: process.env.L1_REMOTE_RPC_URL,
-    LOCAL_RPC_URL: process.env.L1_LOCAL_RPC_URL,
+    REMOTE_RPC_URL: remoteRpcUrl,
+    LOCAL_RPC_URL: process.env.LOCAL_RPC_URL_DIFFYSCAN,
     GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN
   }, { override: true });
 
-  // copy 3 configs
-  // change them
   // ethereum
   const fileNameL1 = './diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L1.json';
   let optimismTestnetConfigL1 = JSON.parse(fs.readFileSync(fileNameL1, 'utf8'));
@@ -43,9 +41,13 @@ export function setupDiffyscan(newContractsCfg: any) {
 }
 
 export function runDiffyscan(configName: string) {
-  const nodeCmd = 'diffyscan';
+  const nodeCmd = 'poetry';
   const nodeArgs = [
-    `../artifacts/configs/${configName}`
+    'run',
+    'diffyscan',
+    `../artifacts/configs/${configName}`,
+    './hardhat_configs/sepolia_optimism_hardhat_config.js',
+    '--enable-binary-comparison'
   ];
   child_process.spawnSync(nodeCmd, nodeArgs, {
     cwd: './diffyscan',
