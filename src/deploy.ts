@@ -6,10 +6,10 @@ import { strict as assert } from 'node:assert'
 import process from "node:process";
 import * as YAML from "yaml";
 import { JsonRpcProvider } from 'ethers'
-import { runDeployScript, populateDeployScriptEnvs, setupL2RepoTests, runIntegrationTest, copyDeploymentArtifacts, newContractsConfig } from './lido-l2-with-steth';
+import { runDeployScript, populateDeployScriptEnvs, setupL2RepoTests, runIntegrationTest, copyDeploymentArtifacts, configFromArtifacts, runVerification } from './lido-l2-with-steth';
 import { runDiffyscan, setupDiffyscan } from './diffyscan';
 import { setupStateMateConfig, runStateMate, setupStateMateEnvs } from './state-mate';
-import { deployGovExecutor } from './gov-executor';
+import { deployGovExecutor, addGovExecutorToArtifacts, saveArgs } from './gov-executor';
 import { NetworkType } from './types';
 import { program } from "commander";
 import { ethers } from 'ethers'
@@ -51,12 +51,17 @@ async function main() {
   const optProvider = new ethers.JsonRpcProvider(optimismRpc(NetworkType.Forked));
   const { chainId } = await optProvider.getNetwork();
 
-  const govBridgeExecutor = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Forked)!);
+  const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Forked)!);
+  saveArgs(govBridgeExecutorForked, deploymentConfig, 'l2GovExecutorDeployArgsForked.json')
 
-  populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Forked);  
+  populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorForked, NetworkType.Forked);  
   runDeployScript();
   copyDeploymentArtifacts('deployResult.json','deployResultForkedNetwork.json');
-  const newContractsCfgForked = newContractsConfig('deployResultForkedNetwork.json');
+  copyDeploymentArtifacts('l1DeployArgs.json','l1DeployArgsForked.json');
+  copyDeploymentArtifacts('l2DeployArgs.json','l2DeployArgsForked.json');
+  
+  const newContractsCfgForked = configFromArtifacts('deployResultForkedNetwork.json');
+  addGovExecutorToArtifacts(govBridgeExecutorForked, newContractsCfgForked, 'deployResultForkedNetwork.json');
 
   setupStateMateEnvs(
     ethereumRpc(NetworkType.Forked),
@@ -67,12 +72,11 @@ async function main() {
     newContractsCfgForked,
     statemateConfig,
     chainId,
-    govBridgeExecutor,
-    NetworkType.Forked
+    govBridgeExecutorForked
   );
   runStateMate('automaton-sepolia-testnet.yaml');
 
-  setupL2RepoTests(testingParameters, govBridgeExecutor, newContractsCfgForked);
+  setupL2RepoTests(testingParameters, govBridgeExecutorForked, newContractsCfgForked);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
   runIntegrationTest("bridging-rebasable.integration.test.ts");
   runIntegrationTest('op-pusher-pushing-token-rate.integration.test.ts');
@@ -82,47 +86,39 @@ async function main() {
   optNode.process.kill();
 
   // deploy to the real network
+  const govBridgeExecutor = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Real)!);
+  saveArgs(govBridgeExecutor, deploymentConfig, 'l2GovExecutorDeployArgs.json')
+
   populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Real);
   runDeployScript();
   copyDeploymentArtifacts('deployResult.json','deployResultRealNetwork.json');
-  const newContractsCfgReal = newContractsConfig('deployResultRealNetwork.json');
+  copyDeploymentArtifacts('l1DeployArgs.json','l1DeployArgs.json');
+  copyDeploymentArtifacts('l2DeployArgs.json','l2DeployArgs.json');
 
-  // state-mate on real
-  const newContractsCfgRemote = {
-    "ethereum": {
-      "bridgeImplAddress": "0x8375029773953d91CaCfa452b7D24556b9F318AA",
-      "bridgeProxyAddress": "0x4Abf633d9c0F4aEebB4C2E3213c7aa1b8505D332",
-      "opStackTokenRatePusherImplAddress": "0x4067B05a6B2f6801Bfb8d4fF417eD32e71c216d9"
-    },
-    "optimism": {
-      "tokenImplAddress": "0x298953B9426eba4F35a137a4754278a16d97A063",
-      "tokenProxyAddress": "0x24B47cd3A74f1799b32B2de11073764Cb1bb318B",
-      "tokenRebasableImplAddress": "0xFd21C82c99ddFa56EB0B9B2D1d0709b7E26D1B2C",
-      "tokenRebasableProxyAddress": "0xf49D208B5C7b10415C7BeAFe9e656F2DF9eDfe3B",
-      "tokenBridgeImplAddress": "0xD48c69358193a34aC035ea7dfB70daDea1600112",
-      "tokenBridgeProxyAddress": "0xdBA2760246f315203F8B716b3a7590F0FFdc704a",
-      "tokenRateOracleImplAddress": "0xa989A4B3A26e28DC9d106F163B2B1f35153E0517",
-      "tokenRateOracleProxyAddress": "0xB34F2747BCd9BCC4107A0ccEb43D5dcdd7Fabf89"
-    }
-  }
+  await runVerification('l1DeployArgs.json', 'eth_sepolia');
+  await runVerification('l2DeployArgs.json', 'uni_sepolia');
+  await runVerification('l2GovExecutorDeployArgs.json', 'uni_sepolia');
+
+  const newContractsCfgReal = configFromArtifacts('deployResultRealNetwork.json');
+
   setupStateMateEnvs(
     ethereumRpc(NetworkType.Real),
     optimismRpc(NetworkType.Real)
   );
   setupStateMateConfig(
     'automaton-sepolia-testnet.yaml',
-    newContractsCfgRemote,
+    newContractsCfgReal,
     statemateConfig,
     chainId,
-    govBridgeExecutor,
-    NetworkType.Real
+    govBridgeExecutor
   );
   runStateMate('automaton-sepolia-testnet.yaml');
 
   // diffyscan + bytecode on real
-  setupDiffyscan(newContractsCfgRemote, process.env.L1_REMOTE_RPC_URL!);
+  setupDiffyscan(newContractsCfgReal, govBridgeExecutor, deploymentConfig, process.env.L1_REMOTE_RPC_URL!);
   runDiffyscan('optimism_testnet_config_L1.json');
-  setupDiffyscan(newContractsCfgRemote, process.env.L2_REMOTE_RPC_URL!);
+  
+  setupDiffyscan(newContractsCfgReal, govBridgeExecutor, deploymentConfig, process.env.L2_REMOTE_RPC_URL!);
   runDiffyscan('optimism_testnet_config_L2_gov.json');
   runDiffyscan('optimism_testnet_config_L2.json');
 
@@ -131,7 +127,7 @@ async function main() {
   ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545, "l1ForkAfterDeployOutput.txt");
   optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545, "l2ForkAfterDeployOutput.txt");
 
-  setupL2RepoTests(testingParameters, govBridgeExecutor, newContractsCfgRemote);
+  setupL2RepoTests(testingParameters, govBridgeExecutor, newContractsCfgReal);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
   runIntegrationTest("bridging-rebasable.integration.test.ts");
   runIntegrationTest('op-pusher-pushing-token-rate.integration.test.ts');

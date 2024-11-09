@@ -20,8 +20,7 @@ export function setupStateMateConfig(
   newContractsCfg: any,
   statemateConfig: any,
   chainId: bigint,
-  govBridgeExecutor: string,
-  networkType: NetworkType
+  govBridgeExecutor: string
 ) {
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {
     return sectionEntries.find((addr) => addr.anchor == anchor)  as YAML.Scalar;
@@ -55,20 +54,14 @@ export function setupStateMateConfig(
   item("l2TokenRateOracle",l2SectionEntries).value = newContractsCfg["optimism"]["tokenRateOracleProxyAddress"];
   item("l2TokenRateOracleImpl",l2SectionEntries).value = newContractsCfg["optimism"]["tokenRateOracleImplAddress"];
 
-
   const _l2Section = doc.get("l2") as YAML.YAMLMap;
   const contracts = _l2Section.get("contracts") as YAML.YAMLMap;
-
-  // const {ethURL, optUrl} = rpcUrl(stateMateConfig, networkType);
-  // const ethProvider = new ethers.JsonRpcProvider(ethURL);
-  // const chainId = await ethProvider._network.chainId;
 
   function setDS(token: string, address: string) {  
     const stETH = contracts.get(token) as YAML.YAMLMap;
     const checks = stETH.get("checks") as YAML.YAMLMap;
     const name = checks.get("name") as string;
-    const version = "1";//checks.get("getContractVersion") as YAML.Scalar;
-    //const chainId = networkType == NetworkType.Real ? 11155420 : 31337;
+    const version = "1";
     const wstETHDomainSeparator = domainSeparator(name, version, chainId, address);
     checks.set("DOMAIN_SEPARATOR", wstETHDomainSeparator);
   }

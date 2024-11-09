@@ -31,7 +31,7 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
     OPT_DEPLOYER_PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY,
 
     RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL,
-    RPC_OPT_SEPOLIA: process.env.L1_REMOTE_RPC_URL,
+    RPC_OPT_SEPOLIA: process.env.L2_REMOTE_RPC_URL,
     NETWORK: deploymentConfig["network"],
     FORKING: networkType == NetworkType.Forked ? true : false,
 
@@ -86,7 +86,6 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
 
     L2_CROSSDOMAIN_MESSENGER: optimismConfig["tokenBridge"]["messenger"],
   }, { override: true });
-  console.log("process.env=",process.env);
 }
 
 export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: string, newContractsCfg: any) {
@@ -107,6 +106,7 @@ export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: stri
     TESTING_OPT_L2_REBASABLE_TOKEN: newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
     TESTING_OPT_L2_ERC20_TOKEN_BRIDGE: newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
   });
+  console.log("process.env=",process.env);
 }
 
 export function runIntegrationTest(test: string) {
@@ -128,11 +128,44 @@ export function copyDeploymentArtifacts(originalDeployFileName: string, deployRe
   cpSync(originalDeployFilePath, `./artifacts/${deployResultFileName}`);
 }
 
-export function newContractsConfig(fileName: string) {
+export function configFromArtifacts(fileName: string) {
   const data = readFileSync(`./artifacts/${fileName}`, "utf8");
   try {
     return JSON.parse(data);
   } catch (error) {
     throw new Error(`can't parse deploy file ${fileName}: ${(error as Error).message}`);
+  }
+}
+
+export function runVerification(fileName: string, networkName: string) {
+  dotenv.populate(process.env, {
+    ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN,
+    ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN,
+    RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL,
+    RPC_UNI_SEPOLIA: process.env.L2_REMOTE_RPC_URL,
+  }, { override: true });
+
+  const args = configFromArtifacts(fileName);
+  
+  let contract: keyof typeof args;
+  for (contract in args) {
+      console.log(`${contract}: ${args[contract]}`);
+
+      const nodeCmd = 'npx';
+      const nodeArgs = [
+        'hardhat',
+        'verify',
+        '--network',
+        networkName,
+        contract,
+        args[contract]
+      ];
+      console.log("nodeArgs=",nodeArgs);
+
+      child_process.spawnSync(nodeCmd, nodeArgs, {
+        cwd: './lido-l2-with-steth',
+        stdio: 'inherit',
+        env: process.env
+      });
   }
 }

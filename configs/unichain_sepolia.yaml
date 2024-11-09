@@ -67,8 +67,10 @@ deployParameters:
       symbol: "stETH"
       signingDomainVersion: 1
     tokenBridge:
-      messenger: *l2CrossDomainMessenger
       bridgeAdmin: *l2GovernanceExecutor
+      messenger: *l2CrossDomainMessenger
+      l1NonRebasableToken: *wstETH
+      l1RebasableToken: *stETH
       depositsEnabled: true
       withdrawalsEnabled: true
       depositsEnablers: []
