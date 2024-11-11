@@ -36,17 +36,15 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
 
 export function saveArgs(contractAddress: string, deploymentConfig: any, fileName: string) {
   const govBridgeExecutorConfig = deploymentConfig["optimism"]["govBridgeExecutor"];
-  
-  const args = govBridgeExecutorConfig["ovmL2Messenger"] + " " +
-  govBridgeExecutorConfig["ethereumGovExecutor"] + " " + 
-  govBridgeExecutorConfig["delay"] + " " + 
-  govBridgeExecutorConfig["gracePeriod"] + " " +
-  govBridgeExecutorConfig["minDelay"] + " " +
-  govBridgeExecutorConfig["maxDelay"] + " " +
-  govBridgeExecutorConfig["ovmGuiardian"];
 
   const content = {
-    [contractAddress]: args
+    [contractAddress]: [govBridgeExecutorConfig["ovmL2Messenger"],
+    govBridgeExecutorConfig["ethereumGovExecutor"],
+    govBridgeExecutorConfig["delay"],
+    govBridgeExecutorConfig["gracePeriod"],
+    govBridgeExecutorConfig["minDelay"],
+    govBridgeExecutorConfig["maxDelay"],
+    govBridgeExecutorConfig["ovmGuiardian"]]
   };
   // save args
   fs.writeFileSync(`./artifacts/${fileName}`, JSON.stringify(content, null, 2));

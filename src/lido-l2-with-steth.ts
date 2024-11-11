@@ -158,12 +158,44 @@ export function runVerification(fileName: string, networkName: string) {
         '--network',
         networkName,
         contract,
-        args[contract]
+        ...args[contract]
       ];
       console.log("nodeArgs=",nodeArgs);
 
       child_process.spawnSync(nodeCmd, nodeArgs, {
         cwd: './lido-l2-with-steth',
+        stdio: 'inherit',
+        env: process.env
+      });
+  }
+}
+
+export function runVerificationGovExecutor(fileName: string, networkName: string) {
+  dotenv.populate(process.env, {
+    OPTIMISTIC_ETHERSCAN_KEY: process.env.L2_EXPLORER_TOKEN,
+    ALCHEMY_KEY: process.env.ALCHEMY_KEY,
+    PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY,
+  }, { override: true });
+
+  const args = configFromArtifacts(fileName);
+  
+  let contract: keyof typeof args;
+  for (contract in args) {
+      console.log(`${contract}: ${args[contract]}`);
+
+      const nodeCmd = 'npx';
+      const nodeArgs = [
+        'hardhat',
+        'verify',
+        '--network',
+        networkName,
+        contract,
+        ...args[contract]
+      ];
+      console.log("nodeArgs=",nodeArgs);
+
+      child_process.spawnSync(nodeCmd, nodeArgs, {
+        cwd: './governance-crosschain-bridges',
         stdio: 'inherit',
         env: process.env
       });

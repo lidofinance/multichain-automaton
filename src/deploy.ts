@@ -6,7 +6,16 @@ import { strict as assert } from 'node:assert'
 import process from "node:process";
 import * as YAML from "yaml";
 import { JsonRpcProvider } from 'ethers'
-import { runDeployScript, populateDeployScriptEnvs, setupL2RepoTests, runIntegrationTest, copyDeploymentArtifacts, configFromArtifacts, runVerification } from './lido-l2-with-steth';
+import { 
+  runDeployScript,
+  populateDeployScriptEnvs,
+  setupL2RepoTests,
+  runIntegrationTest,
+  copyDeploymentArtifacts,
+  configFromArtifacts,
+  runVerification,
+  runVerificationGovExecutor
+} from './lido-l2-with-steth';
 import { runDiffyscan, setupDiffyscan } from './diffyscan';
 import { setupStateMateConfig, runStateMate, setupStateMateEnvs } from './state-mate';
 import { deployGovExecutor, addGovExecutorToArtifacts, saveArgs } from './gov-executor';
@@ -85,7 +94,7 @@ async function main() {
   ethNode.process.kill();
   optNode.process.kill();
 
-  // deploy to the real network
+  // // deploy to the real network
   const govBridgeExecutor = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Real)!);
   saveArgs(govBridgeExecutor, deploymentConfig, 'l2GovExecutorDeployArgs.json')
 
@@ -97,9 +106,9 @@ async function main() {
 
   await runVerification('l1DeployArgs.json', 'eth_sepolia');
   await runVerification('l2DeployArgs.json', 'uni_sepolia');
-  await runVerification('l2GovExecutorDeployArgs.json', 'uni_sepolia');
-
+  await runVerificationGovExecutor('l2GovExecutorDeployArgs.json', 'uni_sepolia');
   const newContractsCfgReal = configFromArtifacts('deployResultRealNetwork.json');
+  addGovExecutorToArtifacts(govBridgeExecutor, newContractsCfgReal, 'deployResultRealNetwork.json');
 
   setupStateMateEnvs(
     ethereumRpc(NetworkType.Real),
@@ -124,8 +133,8 @@ async function main() {
 
   // run forks
   // run l2 test on them
-  ethNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcEth"]), 8545, "l1ForkAfterDeployOutput.txt");
-  optNode = await spawnTestNode(readUrlOrFromEnv(deploymentConfig["rpcOpt"]), 9545, "l2ForkAfterDeployOutput.txt");
+  ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkAfterDeployOutput.txt");
+  optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkAfterDeployOutput.txt");
 
   setupL2RepoTests(testingParameters, govBridgeExecutor, newContractsCfgReal);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");

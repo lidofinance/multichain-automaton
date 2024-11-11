@@ -13,3 +13,4 @@
 [submodule "governance-crosschain-bridges"]
 	path = governance-crosschain-bridges
 	url = https://github.com/lidofinance/governance-crosschain-bridges
+    branch = deployment/unichain-sepolia
