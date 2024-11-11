@@ -146,27 +146,28 @@ export function runVerification(fileName: string, networkName: string) {
   }, { override: true });
 
   const args = configFromArtifacts(fileName);
-  
+
   let contract: keyof typeof args;
   for (contract in args) {
-      console.log(`${contract}: ${args[contract]}`);
+    const ctorArgs = args[contract].split(" ").map((a: string) => a.slice(1, -1));
+    console.log(`${contract}: ${ctorArgs}`);
 
-      const nodeCmd = 'npx';
-      const nodeArgs = [
-        'hardhat',
-        'verify',
-        '--network',
-        networkName,
-        contract,
-        ...args[contract]
-      ];
-      console.log("nodeArgs=",nodeArgs);
+    const nodeCmd = 'npx';
+    const nodeArgs = [
+      'hardhat',
+      'verify',
+      '--network',
+      networkName,
+      contract,
+      ...ctorArgs,
+    ];
+    console.log("nodeArgs=",nodeArgs);
 
-      child_process.spawnSync(nodeCmd, nodeArgs, {
-        cwd: './lido-l2-with-steth',
-        stdio: 'inherit',
-        env: process.env
-      });
+    child_process.spawnSync(nodeCmd, nodeArgs, {
+      cwd: './lido-l2-with-steth',
+      stdio: 'inherit',
+      env: process.env
+    });
   }
 }
 
@@ -178,7 +179,7 @@ export function runVerificationGovExecutor(fileName: string, networkName: string
   }, { override: true });
 
   const args = configFromArtifacts(fileName);
-  
+
   let contract: keyof typeof args;
   for (contract in args) {
       console.log(`${contract}: ${args[contract]}`);
