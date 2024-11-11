@@ -145,16 +145,19 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
   fs.writeFileSync('./artifacts/configs/optimism_testnet_config_L2.json', JSON.stringify(optimismTestnetConfigL2, null, 2));
 }
 
-export function runDiffyscan(configName: string) {
+export function runDiffyscan(configName: string, withBinaryComparison: boolean) {
   const nodeCmd = 'poetry';
   const nodeArgs = [
     'run',
     'diffyscan',
     `../artifacts/configs/${configName}`,
     './hardhat_configs/sepolia_unichain_hardhat_config.js',
-    '--enable-binary-comparison',
     '--yes'
   ];
+  if (withBinaryComparison) {
+    nodeArgs.push('--enable-binary-comparison');
+  }
+  console.log(`${nodeCmd} ${nodeArgs.join(' ')}`);
   child_process.spawnSync(nodeCmd, nodeArgs, {
     cwd: './diffyscan',
     stdio: 'inherit',
