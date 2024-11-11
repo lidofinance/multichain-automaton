@@ -3,6 +3,8 @@ import * as child_process from 'node:child_process'
 import process from "node:process";
 import fs from "node:fs";
 
+const UNICHAIN_CONFIGS_PATH = './diffyscan/config_samples/unichain';
+
 export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, deploymentConfig: any, remoteRpcUrl: string) {
   dotenv.populate(process.env, {
     // l2-steth
@@ -21,7 +23,7 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
   const optimismConfig = deploymentConfig["optimism"];
 
   // ethereum
-  const fileNameL1 = './diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L1.json';
+  const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L1.json`;
   let optimismTestnetConfigL1 = JSON.parse(fs.readFileSync(fileNameL1, 'utf8'));
   optimismTestnetConfigL1["contracts"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: "OssifiableProxy",
@@ -54,7 +56,7 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
   fs.writeFileSync('./artifacts/configs/optimism_testnet_config_L1.json', JSON.stringify(optimismTestnetConfigL1, null, 2));
 
   // gov executor
-  const fileNameL2Gov = './diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L2_gov.json';
+  const fileNameL2Gov = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2_gov.json`;
   let optimismTestnetConfigL2Gov = JSON.parse(fs.readFileSync(fileNameL2Gov, 'utf8'));
   optimismTestnetConfigL2Gov["contracts"] = {
     [govBridgeExecutor]: "OptimismBridgeExecutor"
@@ -73,7 +75,7 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
   fs.writeFileSync('./artifacts/configs/optimism_testnet_config_L2_gov.json', JSON.stringify(optimismTestnetConfigL2Gov, null, 2));
 
   // optimism
-  const fileNameL2 = './diffyscan/config_samples/optimism/testnet/optimism_testnet_config_L2.json';
+  const fileNameL2 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2.json`;
   let optimismTestnetConfigL2 = JSON.parse(fs.readFileSync(fileNameL2, 'utf8'));
   optimismTestnetConfigL2["contracts"] = {
     [newContractsCfg["optimism"]["tokenRateOracleProxyAddress"]]: "OssifiableProxy",

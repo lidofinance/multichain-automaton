@@ -6,7 +6,7 @@ import { strict as assert } from 'node:assert'
 import process from "node:process";
 import * as YAML from "yaml";
 import { JsonRpcProvider } from 'ethers'
-import { 
+import {
   runDeployScript,
   populateDeployScriptEnvs,
   setupL2RepoTests,
@@ -46,7 +46,7 @@ function optimismRpc(networkType: NetworkType) {
 
 async function main() {
   console.log("start");
-  
+
   const { configPath } = parseCmdLineArgs();
 
   const config = loadYamlConfig(configPath);
