@@ -125,11 +125,11 @@ async function main() {
 
   // diffyscan + bytecode on real
   setupDiffyscan(newContractsCfgReal, govBridgeExecutor, deploymentConfig, process.env.L1_REMOTE_RPC_URL!);
-  runDiffyscan('optimism_testnet_config_L1.json');
-  
+  runDiffyscan('optimism_testnet_config_L1.json', false);
+
   setupDiffyscan(newContractsCfgReal, govBridgeExecutor, deploymentConfig, process.env.L2_REMOTE_RPC_URL!);
-  runDiffyscan('optimism_testnet_config_L2_gov.json');
-  runDiffyscan('optimism_testnet_config_L2.json');
+  runDiffyscan('optimism_testnet_config_L2_gov.json', false);
+  runDiffyscan('optimism_testnet_config_L2.json', false);
 
   // run forks
   // run l2 test on them
