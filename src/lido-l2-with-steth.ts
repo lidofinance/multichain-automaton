@@ -149,8 +149,7 @@ export function runVerification(fileName: string, networkName: string) {
 
   let contract: keyof typeof args;
   for (contract in args) {
-    const ctorArgs = args[contract].split(" ").map((a: string) => a.slice(1, -1));
-    console.log(`${contract}: ${ctorArgs}`);
+    const ctorArgs = args[contract]
 
     const nodeCmd = 'npx';
     const nodeArgs = [
@@ -161,7 +160,7 @@ export function runVerification(fileName: string, networkName: string) {
       contract,
       ...ctorArgs,
     ];
-    console.log("nodeArgs=",nodeArgs);
+    console.log("nodeArgs=", nodeArgs);
 
     child_process.spawnSync(nodeCmd, nodeArgs, {
       cwd: './lido-l2-with-steth',

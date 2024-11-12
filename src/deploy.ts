@@ -63,12 +63,12 @@ async function main() {
   const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Forked)!);
   saveArgs(govBridgeExecutorForked, deploymentConfig, 'l2GovExecutorDeployArgsForked.json')
 
-  populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorForked, NetworkType.Forked);  
+  populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorForked, NetworkType.Forked);
   runDeployScript();
   copyDeploymentArtifacts('deployResult.json','deployResultForkedNetwork.json');
   copyDeploymentArtifacts('l1DeployArgs.json','l1DeployArgsForked.json');
   copyDeploymentArtifacts('l2DeployArgs.json','l2DeployArgsForked.json');
-  
+
   const newContractsCfgForked = configFromArtifacts('deployResultForkedNetwork.json');
   addGovExecutorToArtifacts(govBridgeExecutorForked, newContractsCfgForked, 'deployResultForkedNetwork.json');
 
@@ -90,7 +90,7 @@ async function main() {
   runIntegrationTest("bridging-rebasable.integration.test.ts");
   runIntegrationTest('op-pusher-pushing-token-rate.integration.test.ts');
   runIntegrationTest('optimism.integration.test.ts');
-  
+
   ethNode.process.kill();
   optNode.process.kill();
 

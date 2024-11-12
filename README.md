@@ -2,19 +2,14 @@
 
 ## Install
 
-Install dependencies in a root folder.
+Run in the root folder:
 
 ```bash
 yarn install
 ```
 
-Pull all github submodules.
+It will install the dependencies for the automaton and each submodule as well as compile the contracts.
 
-```bash
-git submodule update --init
-```
-
-Go to each submodule and install its dependencies.
 
 ## Usage
 
@@ -52,3 +47,7 @@ Run script
 ```bash
 yarn start ./path/to/config.yaml
 ```
+
+While it's running it will ask you to confirm continuing with the deployment a few times.
+
+The overall process takes somewhat about 15 minutes depending on the network, RPCs, etc.

@@ -3,7 +3,7 @@
   "packageManager": "yarn@4.5.1",
   "scripts": {
     "start": "ts-node src/deploy.ts",
-    "postinstall": "cd diffyscan && yarn && poetry install && cd ../lido-l2-with-steth && npm install && npm run compile && cd ../state-mate && yarn && cd ../governance-crosschain-bridges && npm install && npm run compile && cd .."
+    "postinstall": "cd diffyscan && yarn && poetry install && cd ../lido-l2-with-steth && npm install && npm run compile && cd ../state-mate && yarn && cd ../governance-crosschain-bridges && npm install && npm run compile && cd .. && mkdir -p artifacts"
   },
   "dependencies": {
     "chalk": "^4.1.2",
