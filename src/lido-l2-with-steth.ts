@@ -4,18 +4,22 @@ import process from "node:process";
 import { NetworkType } from './types';
 import { readFileSync, cpSync } from "node:fs";
 
-export function runDeployScript() {
+export function runDeployScript(throwOnFail: boolean = false) {
   const nodeCmd = 'ts-node';
   const nodeArgs = [
     '--files',
     './scripts/optimism/deploy-automaton.ts'
   ];
   console.debug(`\nRun deploy script: ${nodeCmd} ${nodeArgs.join(' ')}`)
-  child_process.spawnSync(nodeCmd, nodeArgs, {
+  const result = child_process.spawnSync(nodeCmd, nodeArgs, {
     cwd: './lido-l2-with-steth',
     stdio: 'inherit',
     env: process.env
   });
+
+  if (throwOnFail && result.status !== 0) {
+    throw new Error(`Deploy script failed with exit code ${result.status}`);
+  }
 }
 
 export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecutor: string, networkType: NetworkType) {
@@ -85,6 +89,8 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
     L2_WITHDRAWALS_DISABLERS: formattedArray([...optimismConfig["tokenBridge"]["withdrawalsDisablers"], govBridgeExecutor]),
 
     L2_CROSSDOMAIN_MESSENGER: optimismConfig["tokenBridge"]["messenger"],
+
+    L2_DEPLOY_SKIP_PROMPTS: "1",
   }, { override: true });
 }
 

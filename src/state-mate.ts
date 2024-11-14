@@ -20,12 +20,11 @@ export function setupStateMateConfig(
   newContractsCfg: any,
   statemateConfig: any,
   chainId: bigint,
-  govBridgeExecutor: string
 ) {
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {
     return sectionEntries.find((addr) => addr.anchor == anchor)  as YAML.Scalar;
   }
-  
+
   const seedConfigPath = `./state-mate/configs/optimism/${configName}`;
   const seedDoc = YAML.parseDocument(fs.readFileSync(seedConfigPath, "utf-8"), {intAsBigInt: true});
   const doc = new YAML.Document(seedDoc);
@@ -44,7 +43,7 @@ export function setupStateMateConfig(
 
   const l2Section = deployedSection.get("l2") as YAML.YAMLSeq;
   const l2SectionEntries = l2Section.items as [YAML.Scalar];
-  item("l2GovernanceExecutor",l2SectionEntries).value = govBridgeExecutor;
+  item("l2GovernanceExecutor",l2SectionEntries).value = newContractsCfg["optimism"]["govBridgeExecutor"];
   item("l2TokenBridge",l2SectionEntries).value = newContractsCfg["optimism"]["tokenBridgeProxyAddress"];
   item("l2TokenBridgeImpl",l2SectionEntries).value = newContractsCfg["optimism"]["tokenBridgeImplAddress"];
   item("l2WstETH",l2SectionEntries).value = newContractsCfg["optimism"]["tokenProxyAddress"];
@@ -57,7 +56,7 @@ export function setupStateMateConfig(
   const _l2Section = doc.get("l2") as YAML.YAMLMap;
   const contracts = _l2Section.get("contracts") as YAML.YAMLMap;
 
-  function setDS(token: string, address: string) {  
+  function setDS(token: string, address: string) {
     const stETH = contracts.get(token) as YAML.YAMLMap;
     const checks = stETH.get("checks") as YAML.YAMLMap;
     const name = checks.get("name") as string;
