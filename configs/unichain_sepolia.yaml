@@ -8,7 +8,6 @@ parameters:
   - &l2EmergencyBreaksMultisig "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1"
   - &l1CrossDomainMessenger "0x448A37330A60494E666F6DD60aD48d930AEbA381"
   - &l2CrossDomainMessenger "0x4200000000000000000000000000000000000007"
-  - &l2GovernanceExecutor "0xf695357C66bA514150Da95b189acb37b46DDe602"
 
 statemate:
   l1CrossDomainMessenger: *l1CrossDomainMessenger
@@ -36,7 +35,6 @@ deployParameters:
       withdrawalsEnablers: [*agent]
       withdrawalsDisablers: [*agent, *l1EmergencyBreaksMultisig]
   optimism:
-    proxyAdmin: *l2GovernanceExecutor
     govBridgeExecutor:
       ovmL2Messenger: "0x4200000000000000000000000000000000000007"
       ethereumGovExecutor: *agent
@@ -46,7 +44,6 @@ deployParameters:
       maxDelay: 1
       ovmGuiardian: "0x0000000000000000000000000000000000000000"
     tokenRateOracle:
-      oracleAdmin: *l2GovernanceExecutor
       l2Messenger: *l2CrossDomainMessenger
       tokenRateOutdatedDelay: 86400
       maxAllowedL2ToL1ClockLag: 86400
@@ -67,7 +64,6 @@ deployParameters:
       symbol: "stETH"
       signingDomainVersion: 1
     tokenBridge:
-      bridgeAdmin: *l2GovernanceExecutor
       messenger: *l2CrossDomainMessenger
       l1NonRebasableToken: *wstETH
       l1RebasableToken: *stETH
@@ -85,4 +81,3 @@ testingParameters:
   l1NonRebasableToken: *wstETH
   l1RebasableToken: *stETH
   l1TokensHolder: "0xCDE580933C37Ed0d77c999454ab8728f3dCF2854"
-  l2GovernanceExecutor: *l2GovernanceExecutor
