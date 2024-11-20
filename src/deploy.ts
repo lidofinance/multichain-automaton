@@ -67,12 +67,15 @@ async function main() {
   const optProvider = new ethers.JsonRpcProvider(optimismRpc(NetworkType.Real));
   const { chainId } = await optProvider.getNetwork();
 
+  let ethNode;
+  let optNode;
+
   // Deploy to the forked network
   if (!onlyCheck) {
-    const ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
-    const optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
+    ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
+    optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
 
-    await burnL2DeployerNonces(optNode.rpcUrl, NUM_L1_DEPLOYED_CONTRACTS);
+    await burnL2DeployerNonces(optimismRpc(NetworkType.Forked)!, NUM_L1_DEPLOYED_CONTRACTS);
     const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Forked)!);
     saveArgs(govBridgeExecutorForked, deploymentConfig, "l2GovExecutorDeployArgsForked.json");
 
@@ -217,7 +220,18 @@ export async function spawnTestNode(rpcForkUrl: string, port: number, outputFile
   const output = fs.createWriteStream(`./artifacts/${outputFileName}`);
   await once(output, "open");
 
-  const processInstance = child_process.spawn(nodeCmd, nodeArgs, { stdio: ["ignore", output, output] });
+  const processInstance = child_process.spawn(nodeCmd, nodeArgs);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  processInstance.stdout.on("data", (data: any) => {
+    console.log(`stdout: ${data}`);
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  processInstance.stderr.on("data", (data: any) => {
+    console.error(`stderr: ${data}`);
+  });
+
   console.debug(`\nSpawning test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
 
   const localhost = `http://localhost:${port}`;
@@ -240,7 +254,7 @@ export async function spawnTestNode(rpcForkUrl: string, port: number, outputFile
   }
 
   console.debug(`\nSpawned test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
-  return { processInstance, rpcForkUrl };
+  return { process: processInstance, rpcUrl: rpcForkUrl };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

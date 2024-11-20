@@ -30,15 +30,15 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   const optimismConfig = deploymentConfig["optimism"];
 
   dotenv.populate(
-    process.env,
+    process.env as { [key: string]: string },
     {
-      ETH_DEPLOYER_PRIVATE_KEY: process.env.L1_DEPLOYER_PRIVATE_KEY,
-      OPT_DEPLOYER_PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY,
+      ETH_DEPLOYER_PRIVATE_KEY: process.env.L1_DEPLOYER_PRIVATE_KEY ?? "",
+      OPT_DEPLOYER_PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY ?? "",
 
-      RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL,
-      RPC_OPT_SEPOLIA: process.env.L2_REMOTE_RPC_URL,
+      RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL ?? "",
+      RPC_OPT_SEPOLIA: process.env.L2_REMOTE_RPC_URL ?? "",
       NETWORK: deploymentConfig["network"],
-      FORKING: networkType == NetworkType.Forked ? true : false,
+      FORKING: networkType == NetworkType.Forked ? "true" : "false",
 
       // L1
       L1_PROXY_ADMIN: ethereumConfig["proxyAdmin"],
@@ -113,9 +113,9 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: string, newContractsCfg: any) {
-  dotenv.populate(process.env, {
+  dotenv.populate(process.env as { [key: string]: string }, {
     TESTING_OPT_NETWORK: "sepolia",
-    TESTING_USE_DEPLOYED_CONTRACTS: true,
+    TESTING_USE_DEPLOYED_CONTRACTS: "true",
     TESTING_OPT_L1_LIDO: testingParameters["lido"],
     TESTING_OPT_L1_REBASABLE_TOKEN: testingParameters["l1RebasableToken"],
     TESTING_OPT_L1_NON_REBASABLE_TOKEN: testingParameters["l1NonRebasableToken"],
@@ -159,12 +159,12 @@ export function configFromArtifacts(fileName: string) {
 
 export function runVerification(fileName: string, networkName: string) {
   dotenv.populate(
-    process.env,
+    process.env as { [key: string]: string },
     {
-      ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN,
-      ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN,
-      RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL,
-      RPC_UNI_SEPOLIA: process.env.L2_REMOTE_RPC_URL,
+      ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN ?? "",
+      ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN ?? "",
+      RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL ?? "",
+      RPC_UNI_SEPOLIA: process.env.L2_REMOTE_RPC_URL ?? "",
     },
     { override: true },
   );
@@ -189,11 +189,11 @@ export function runVerification(fileName: string, networkName: string) {
 
 export function runVerificationGovExecutor(fileName: string, networkName: string) {
   dotenv.populate(
-    process.env,
+    process.env as { [key: string]: string },
     {
-      OPTIMISTIC_ETHERSCAN_KEY: process.env.L2_EXPLORER_TOKEN,
-      ALCHEMY_KEY: process.env.ALCHEMY_KEY,
-      PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY,
+      OPTIMISTIC_ETHERSCAN_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
+      ALCHEMY_KEY: process.env.ALCHEMY_KEY ?? "",
+      PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY ?? "",
     },
     { override: true },
   );

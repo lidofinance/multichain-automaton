@@ -15,7 +15,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
   );
   const { abi, bytecode } = contractJson;
   const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new ethers.Wallet(process.env.L2_DEPLOYER_PRIVATE_KEY, provider);
+  const wallet = new ethers.Wallet(process.env.L2_DEPLOYER_PRIVATE_KEY ?? "", provider);
   const ContractFactory = new ethers.ContractFactory(abi, bytecode, wallet);
 
   const govBridgeExecutorConfig = deploymentConfig["optimism"]["govBridgeExecutor"];

@@ -8,7 +8,7 @@ import * as YAML from "yaml";
 
 export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
   dotenv.populate(
-    process.env,
+    process.env as { [key: string]: string },
     {
       L1_TESTNET_RPC_URL: ethereumRpcUrl,
       L2_TESTNET_RPC_URL: optimismRpcUrl,

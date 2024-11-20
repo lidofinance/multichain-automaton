@@ -6,26 +6,27 @@ import dotenv from "dotenv";
 
 const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/unichain";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setupDiffyscan(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
   govBridgeExecutor: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   deploymentConfig: any,
   remoteRpcUrl: string,
 ) {
   dotenv.populate(
-    process.env,
+    process.env as { [key: string]: string },
     {
       // l2-steth
-      ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN,
-      ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN,
+      ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN ?? "",
+      ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN ?? "",
       RPC_UNI_SEPOLIA: remoteRpcUrl,
       // diffyscan
-      ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN,
-      OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN,
+      ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN ?? "",
+      OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN ?? "",
       REMOTE_RPC_URL: remoteRpcUrl,
-      LOCAL_RPC_URL: process.env.LOCAL_RPC_URL_DIFFYSCAN,
-      GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN,
+      LOCAL_RPC_URL: process.env.LOCAL_RPC_URL_DIFFYSCAN ?? "",
+      GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN ?? "",
     },
     { override: true },
   );
