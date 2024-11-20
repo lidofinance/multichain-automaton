@@ -60,7 +60,7 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
     L2_PROXY_ADMIN: govBridgeExecutor,
 
     TOKEN_RATE_ORACLE_PROXY_ADMIN: govBridgeExecutor,
-    TOKEN_RATE_ORACLE_ADMIN: optimismConfig["tokenRateOracle"]["oracleAdmin"],
+    TOKEN_RATE_ORACLE_ADMIN: govBridgeExecutor,
     TOKEN_RATE_UPDATE_ENABLED: optimismConfig["tokenRateOracle"]["updateEnabled"],
     TOKEN_RATE_UPDATE_ENABLERS: formattedArray([...optimismConfig["tokenRateOracle"]["updateEnablers"], govBridgeExecutor]),
     TOKEN_RATE_UPDATE_DISABLERS: formattedArray([...optimismConfig["tokenRateOracle"]["updateDisablers"], govBridgeExecutor]),
