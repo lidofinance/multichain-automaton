@@ -1,9 +1,11 @@
-import { ethers } from 'ethers'
 import { readFileSync } from 'node:fs';
-import chalk from 'chalk';
 import fs from "node:fs";
-const process = require('node:process');
+import process from 'node:process';
 
+import chalk from 'chalk';
+import { ethers } from 'ethers'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
   const contractJson = JSON.parse(readFileSync("./governance-crosschain-bridges/artifacts/contracts/bridges/OptimismBridgeExecutor.sol/OptimismBridgeExecutor.json", "utf-8"));
   const { abi, bytecode } = contractJson;
@@ -34,6 +36,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
   return deployedContractAddress;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function saveArgs(contractAddress: string, deploymentConfig: any, fileName: string) {
   const govBridgeExecutorConfig = deploymentConfig["optimism"]["govBridgeExecutor"];
 
@@ -50,8 +53,8 @@ export function saveArgs(contractAddress: string, deploymentConfig: any, fileNam
   fs.writeFileSync(`./artifacts/${fileName}`, JSON.stringify(content, null, 2));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function addGovExecutorToArtifacts(govBridgeExecutor: string, newContractsConfig: any, fileName: string) {
   newContractsConfig["optimism"]["govBridgeExecutor"] = govBridgeExecutor;
   fs.writeFileSync(`./artifacts/${fileName}`, JSON.stringify(newContractsConfig, null, 2));
 }
-

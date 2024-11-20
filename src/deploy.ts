@@ -1,28 +1,29 @@
-import 'dotenv/config'
+import { strict as assert } from 'node:assert'
+import * as child_process from 'node:child_process'
 import fs from "node:fs";
 import path from "node:path";
-import * as child_process from 'node:child_process'
-import { strict as assert } from 'node:assert'
 import process from "node:process";
-import * as YAML from "yaml";
-import { JsonRpcProvider } from 'ethers'
-import {
-  runDeployScript,
-  populateDeployScriptEnvs,
-  setupL2RepoTests,
-  runIntegrationTest,
-  copyDeploymentArtifacts,
-  configFromArtifacts,
-  runVerification,
-  runVerificationGovExecutor
-} from './lido-l2-with-steth';
-import { runDiffyscan, setupDiffyscan } from './diffyscan';
-import { setupStateMateConfig, runStateMate, setupStateMateEnvs } from './state-mate';
-import { deployGovExecutor, addGovExecutorToArtifacts, saveArgs } from './gov-executor';
-import { NetworkType } from './types';
+
+import 'dotenv/config'
 import { program } from "commander";
+import { JsonRpcProvider } from 'ethers'
 import { ethers } from 'ethers'
-const {once} = require('stream')
+import { once } from 'stream';
+import * as YAML from "yaml";
+
+import { runDiffyscan, setupDiffyscan } from './diffyscan';
+import { addGovExecutorToArtifacts, deployGovExecutor, saveArgs } from './gov-executor';
+import {
+  configFromArtifacts,
+  copyDeploymentArtifacts,
+  populateDeployScriptEnvs,
+  runDeployScript,
+  runIntegrationTest,
+  runVerification,
+  runVerificationGovExecutor,
+  setupL2RepoTests} from './lido-l2-with-steth';
+import { runStateMate, setupStateMateConfig, setupStateMateEnvs } from './state-mate';
+import { NetworkType } from './types';
 
 export type ChildProcess = child_process.ChildProcessWithoutNullStreams
 export type TestNode = { process: ChildProcess, rpcUrl: string }
@@ -63,8 +64,8 @@ async function main() {
 
   // Deploy to the forked network
   if (!onlyCheck) {
-    var ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
-    var optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
+    const ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
+    const optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
 
     await burnL2DeployerNonces(optNode.rpcUrl, NUM_L1_DEPLOYED_CONTRACTS);
     const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Forked)!);
@@ -122,7 +123,7 @@ async function main() {
     await runVerification('l1DeployArgs.json', 'eth_sepolia');
     await runVerification('l2DeployArgs.json', 'uni_sepolia');
     await runVerificationGovExecutor('l2GovExecutorDeployArgs.json', 'uni_sepolia');
-    let newContractsCfgReal = configFromArtifacts('deployResultRealNetwork.json');
+    const newContractsCfgReal = configFromArtifacts('deployResultRealNetwork.json');
     addGovExecutorToArtifacts(govBridgeExecutor, newContractsCfgReal, 'deployResultRealNetwork.json');
   }
   const newContractsCfgReal = configFromArtifacts('deployResultRealNetwork.json');
@@ -181,6 +182,7 @@ function isUrl(maybeUrl: string) {
   try {
     new URL(maybeUrl);
     return true;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (_) {
     return false;
   }
@@ -209,28 +211,29 @@ function readUrlOrFromEnv(urlOrEnvVarName: string) {
   }
 }
 
-export async function spawnTestNode(rpcUrl: string, port: number, outputFileName: string) {
+export async function spawnTestNode(rpcForkUrl: string, port: number, outputFileName: string) {
   const nodeCmd = 'anvil'
   const nodeArgs = [
-    '--fork-url', `${rpcUrl}`,
+    '--fork-url', `${rpcForkUrl}`,
     '-p', `${port}`,
   ]
 
   const output = fs.createWriteStream(`./artifacts/${outputFileName}`);
   await once(output, 'open');
 
-  const process = child_process.spawn(nodeCmd, nodeArgs, { stdio: ['ignore', output, output] });
+  const processInstance = child_process.spawn(nodeCmd, nodeArgs, { stdio: ['ignore', output, output] });
   console.debug(`\nSpawning test node: ${nodeCmd} ${nodeArgs.join(' ')}`)
 
   const localhost = `http://localhost:${port}`
   const provider = new JsonRpcProvider(localhost)
   let rpcError: Error | undefined = undefined
   for (let attempt = 0; attempt < 30; ++attempt) {
-    assert(process)
-    assert(process.exitCode === null)
+    assert(processInstance)
+    assert(processInstance.exitCode === null)
     try {
       await provider.getBlock('latest') // check RPC is healthy
       rpcError = undefined
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       await new Promise((r) => setTimeout(r, 1000))
       rpcError = e
@@ -241,9 +244,10 @@ export async function spawnTestNode(rpcUrl: string, port: number, outputFileName
   }
 
   console.debug(`\nSpawned test node: ${nodeCmd} ${nodeArgs.join(' ')}`)
-  return { process, rpcUrl }
+  return { processInstance, rpcForkUrl }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rpcUrl(config: any, networkType: NetworkType) {
   if (networkType == NetworkType.Real) {
     return (config["rpcEthRemote"], config["rpcOptRemote"])

@@ -17,7 +17,14 @@ const gitignorePath = path.resolve(__dirname, ".gitignore");
 export default [
   includeIgnoreFile(gitignorePath),
   {
-    ignores: [".solcover.js", "eslint.config.mjs"],
+    ignores: [
+      "diffyscan/*",
+      "state-mate/*",
+      "lido-l2-with-steth/*",
+      "governance-crosschain-bridges/*",
+      "hardhat.config.js",
+      "eslint.config.mjs"
+    ],
   },
   js.configs.recommended,
   ...ts.configs.recommended,

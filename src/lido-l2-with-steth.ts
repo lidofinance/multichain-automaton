@@ -1,8 +1,10 @@
-const dotenv = require('dotenv');
 import * as child_process from 'node:child_process'
+import { cpSync,readFileSync } from "node:fs";
 import process from "node:process";
+
+import dotenv from 'dotenv';
+
 import { NetworkType } from './types';
-import { readFileSync, cpSync } from "node:fs";
 
 export function runDeployScript(throwOnFail: boolean = false) {
   const nodeCmd = 'ts-node';
@@ -22,6 +24,7 @@ export function runDeployScript(throwOnFail: boolean = false) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecutor: string, networkType: NetworkType) {
 
   function formattedArray(configArray: Array<string>) {
@@ -94,6 +97,7 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   }, { override: true });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: string, newContractsCfg: any) {
   dotenv.populate(process.env, {
     TESTING_OPT_NETWORK: "sepolia",

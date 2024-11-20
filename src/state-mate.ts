@@ -1,10 +1,10 @@
-import fs from "node:fs";
-import * as YAML from "yaml";
-import { ethers } from 'ethers'
 import * as child_process from 'node:child_process'
+import fs from "node:fs";
 import process from "node:process";
-import { NetworkType } from './types';
-const dotenv = require('dotenv');
+
+import dotenv from 'dotenv';
+import { ethers } from 'ethers'
+import * as YAML from "yaml";
 
 export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
     dotenv.populate(process.env, {
@@ -17,7 +17,9 @@ export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: strin
 
 export function setupStateMateConfig(
   configName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statemateConfig: any,
   chainId: bigint,
 ) {

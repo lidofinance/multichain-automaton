@@ -1,10 +1,12 @@
-const dotenv = require('dotenv')
 import * as child_process from 'node:child_process'
-import process from "node:process";
 import fs from "node:fs";
+import process from "node:process";
+
+import dotenv from 'dotenv';
 
 const UNICHAIN_CONFIGS_PATH = './diffyscan/config_samples/unichain';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, deploymentConfig: any, remoteRpcUrl: string) {
   dotenv.populate(process.env, {
     // l2-steth
@@ -24,7 +26,7 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
 
   // ethereum
   const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L1.json`;
-  let optimismTestnetConfigL1 = JSON.parse(fs.readFileSync(fileNameL1, 'utf8'));
+  const optimismTestnetConfigL1 = JSON.parse(fs.readFileSync(fileNameL1, 'utf8'));
   optimismTestnetConfigL1["contracts"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: "OssifiableProxy",
     [newContractsCfg["ethereum"]["bridgeImplAddress"]]: "L1LidoTokensBridge",
@@ -57,7 +59,7 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
 
   // gov executor
   const fileNameL2Gov = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2_gov.json`;
-  let optimismTestnetConfigL2Gov = JSON.parse(fs.readFileSync(fileNameL2Gov, 'utf8'));
+  const optimismTestnetConfigL2Gov = JSON.parse(fs.readFileSync(fileNameL2Gov, 'utf8'));
   optimismTestnetConfigL2Gov["contracts"] = {
     [govBridgeExecutor]: "OptimismBridgeExecutor"
   };
@@ -76,7 +78,7 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
 
   // optimism
   const fileNameL2 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2.json`;
-  let optimismTestnetConfigL2 = JSON.parse(fs.readFileSync(fileNameL2, 'utf8'));
+  const optimismTestnetConfigL2 = JSON.parse(fs.readFileSync(fileNameL2, 'utf8'));
   optimismTestnetConfigL2["contracts"] = {
     [newContractsCfg["optimism"]["tokenRateOracleProxyAddress"]]: "OssifiableProxy",
     [newContractsCfg["optimism"]["tokenRateOracleImplAddress"]]: "TokenRateOracle",
