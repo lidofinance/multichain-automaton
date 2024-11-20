@@ -220,19 +220,11 @@ export async function spawnTestNode(rpcForkUrl: string, port: number, outputFile
   const output = fs.createWriteStream(`./artifacts/${outputFileName}`);
   await once(output, "open");
 
-  const processInstance = child_process.spawn(nodeCmd, nodeArgs);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  processInstance.stdout.on("data", (data: any) => {
-    console.log(`stdout: ${data}`);
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  processInstance.stderr.on("data", (data: any) => {
-    console.error(`stderr: ${data}`);
-  });
+  const processInstance = child_process.spawn(nodeCmd, nodeArgs, { stdio: ["ignore", output, output] });
 
   console.debug(`\nSpawning test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
+  console.debug(`Waiting 5 seconds ...`);
+  await new Promise((r) => setTimeout(r, 5000));
 
   const localhost = `http://localhost:${port}`;
   const provider = new JsonRpcProvider(localhost);
