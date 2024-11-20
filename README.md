@@ -14,13 +14,13 @@ Multichain Automaton serves a single purpose: to facilitate the fastest possible
 
 The script performs the following steps:
 
-1. **Forked Environment Deployment**: Runs the deployment on a forked environment.
-2. **Artifact Verification**: Verifies the state of the resulting deployment artifacts.
-3. **Live Environment Deployment**: Executes the deployment on the live environment.
-4. **Real Artifact Verification**: Verifies the state of the real deployment artifacts.
-5. **Code Verification**: Checks the bytecode and source code for consistency.
-6. **Storage and Getter Verification**: Verifies storage values and public getter results.
-7. **End-to-End Testing**: Performs comprehensive tests to ensure functionality.
+1. **Forked network deployment**: Runs the deployment on a forked environment.
+2. **Artifact verification**: Verifies the state of the resulting deployment artifacts.
+3. **Live network deployment**: Executes the deployment on the live environment.
+4. **Real artifact verification**: Verifies the state of the real deployment artifacts.
+5. **Code verification**: Checks the bytecode and source code for consistency.
+6. **Storage and getter verification**: Verifies storage values and public getter results.
+7. **E2E testing**: Performs comprehensive tests to ensure functionality.
 
 ## Installation
 
