@@ -1,13 +1,18 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 import fs from "node:fs";
-import process from 'node:process';
+import process from "node:process";
 
-import chalk from 'chalk';
-import { ethers } from 'ethers'
+import chalk from "chalk";
+import { ethers } from "ethers";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
-  const contractJson = JSON.parse(readFileSync("./governance-crosschain-bridges/artifacts/contracts/bridges/OptimismBridgeExecutor.sol/OptimismBridgeExecutor.json", "utf-8"));
+  const contractJson = JSON.parse(
+    readFileSync(
+      "./governance-crosschain-bridges/artifacts/contracts/bridges/OptimismBridgeExecutor.sol/OptimismBridgeExecutor.json",
+      "utf-8",
+    ),
+  );
   const { abi, bytecode } = contractJson;
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new ethers.Wallet(process.env.L2_DEPLOYER_PRIVATE_KEY, provider);
@@ -41,13 +46,15 @@ export function saveArgs(contractAddress: string, deploymentConfig: any, fileNam
   const govBridgeExecutorConfig = deploymentConfig["optimism"]["govBridgeExecutor"];
 
   const content = {
-    [contractAddress]: [govBridgeExecutorConfig["ovmL2Messenger"],
-    govBridgeExecutorConfig["ethereumGovExecutor"],
-    govBridgeExecutorConfig["delay"],
-    govBridgeExecutorConfig["gracePeriod"],
-    govBridgeExecutorConfig["minDelay"],
-    govBridgeExecutorConfig["maxDelay"],
-    govBridgeExecutorConfig["ovmGuiardian"]]
+    [contractAddress]: [
+      govBridgeExecutorConfig["ovmL2Messenger"],
+      govBridgeExecutorConfig["ethereumGovExecutor"],
+      govBridgeExecutorConfig["delay"],
+      govBridgeExecutorConfig["gracePeriod"],
+      govBridgeExecutorConfig["minDelay"],
+      govBridgeExecutorConfig["maxDelay"],
+      govBridgeExecutorConfig["ovmGuiardian"],
+    ],
   };
   // save args
   fs.writeFileSync(`./artifacts/${fileName}`, JSON.stringify(content, null, 2));

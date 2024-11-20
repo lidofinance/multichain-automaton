@@ -1,6 +1,11 @@
 .gitignore
 .prettierignore
 
+diffyscan/*
+state-mate/*
+lido-l2-with-steth/*
+governance-crosschain-bridges/*
+hardhat.config.js
 eslint.config.mjs
 
 yarn.json

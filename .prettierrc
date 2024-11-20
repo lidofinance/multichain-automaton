@@ -1,18 +1,7 @@
 {
-    "semi": true,
-    "singleQuote": false,
-    "printWidth": 120,
-    "tabWidth": 2,
-    "quoteProps": "consistent",
-    "plugins": ["prettier-plugin-solidity"],
-    "overrides": [
-      {
-        "files": "*.sol",
-        "options": {
-          "parser": "solidity-parse",
-          "tabWidth": 4,
-          "useTabs": false
-        }
-      }
-    ]
-  }
+  "semi": true,
+  "singleQuote": false,
+  "printWidth": 120,
+  "tabWidth": 2,
+  "quoteProps": "consistent"
+}
