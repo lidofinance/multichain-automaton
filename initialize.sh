@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-echo 'Now a postinstall script runs. It might take a few minutes to finish'
-sleep 3
+echo 'The initialize script is about to start. It will install the dependencies as well as fetch submodules repositories and do all the necessary preliminary work'
+sleep 5
 
 git submodule init
 git submodule update
