@@ -2,7 +2,7 @@
   "name": "multichain-automaton",
   "packageManager": "yarn@4.5.1",
   "scripts": {
-    "start": "ts-node src/deploy.ts",
+    "start": "ts-node src/deploy.ts"
   },
   "dependencies": {
     "chalk": "^4.1.2",
