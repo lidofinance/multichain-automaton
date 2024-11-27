@@ -5,7 +5,7 @@
 Run in the root folder:
 
 ```bash
-yarn install
+bash initialize.sh
 ```
 
 It will install the dependencies for the automaton and each submodule as well as compile the contracts.
