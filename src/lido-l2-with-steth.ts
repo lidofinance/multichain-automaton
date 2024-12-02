@@ -112,7 +112,6 @@ export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: stri
     TESTING_OPT_L2_REBASABLE_TOKEN: newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
     TESTING_OPT_L2_ERC20_TOKEN_BRIDGE: newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
   });
-  console.log("process.env=",process.env);
 }
 
 export function runIntegrationTest(test: string) {

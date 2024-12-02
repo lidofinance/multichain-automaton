@@ -136,7 +136,7 @@ export function setupDiffyscan(newContractsCfg: any, govBridgeExecutor: string, 
     ],
     [newContractsCfg["optimism"]["tokenBridgeImplAddress"]]: [
       optimismConfig["tokenBridge"]["messenger"],
-      newContractsCfg["ethereum"]["tokenBridgeProxyAddress"],
+      newContractsCfg["ethereum"]["bridgeProxyAddress"],
       optimismConfig["tokenBridge"]["l1NonRebasableToken"],
       optimismConfig["tokenBridge"]["l1RebasableToken"],
       newContractsCfg["optimism"]["tokenProxyAddress"],
