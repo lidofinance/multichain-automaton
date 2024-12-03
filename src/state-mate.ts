@@ -3,7 +3,6 @@ import * as YAML from "yaml";
 import { ethers } from 'ethers'
 import * as child_process from 'node:child_process'
 import process from "node:process";
-import { NetworkType } from './types';
 const dotenv = require('dotenv');
 
 export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {

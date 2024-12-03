@@ -5,7 +5,7 @@ import * as child_process from 'node:child_process'
 import { strict as assert } from 'node:assert'
 import process from "node:process";
 import * as YAML from "yaml";
-import { JsonRpcProvider } from 'ethers'
+import { ethers, JsonRpcProvider } from 'ethers'
 import {
   runDeployScript,
   populateDeployScriptEnvs,
@@ -14,39 +14,20 @@ import {
   copyDeploymentArtifacts,
   configFromArtifacts,
   runVerification,
-  runVerificationGovExecutor
+  runVerificationGovExecutor,
+  burnL2DeployerNonces
 } from './lido-l2-with-steth';
 import { runDiffyscan, setupDiffyscan } from './diffyscan';
 import { setupStateMateConfig, runStateMate, setupStateMateEnvs } from './state-mate';
 import { deployGovExecutor, addGovExecutorToArtifacts, saveArgs } from './gov-executor';
 import { NetworkType } from './types';
 import { program } from "commander";
-import { ethers } from 'ethers'
-const {once} = require('stream')
+const {once} = require('stream');
 
 export type ChildProcess = child_process.ChildProcessWithoutNullStreams
 export type TestNode = { process: ChildProcess, rpcUrl: string }
 
 const NUM_L1_DEPLOYED_CONTRACTS = 3;
-
-function parseCmdLineArgs() {
-  program
-    .argument("<config-path>", "path to .yaml config file")
-    .option("--onlyCheck", "only check the real network deployment")
-    .option("--onlyForkDeploy", "only deploy to the forked network")
-    .parse();
-
-  const configPath = program.args[0];
-  return { configPath, onlyCheck: program.getOptionValue('onlyCheck'), onlyForkDeploy: program.getOptionValue('onlyForkDeploy') };
-}
-
-function ethereumRpc(networkType: NetworkType) {
-  return networkType == NetworkType.Forked ? process.env.L1_LOCAL_RPC_URL! : process.env.L1_REMOTE_RPC_URL!;
-}
-
-function optimismRpc(networkType: NetworkType) {
-  return networkType == NetworkType.Forked ? process.env.L2_LOCAL_RPC_URL! : process.env.L2_REMOTE_RPC_URL!;
-}
 
 async function main() {
   console.log("start");
@@ -58,16 +39,17 @@ async function main() {
   const testingParameters = config["testingParameters"];
   const statemateConfig = config["statemate"];
 
-  const optProvider = new ethers.JsonRpcProvider(optimismRpc(NetworkType.Real));
+  const optProvider = new ethers.JsonRpcProvider(l2RPC(NetworkType.Real));
   const { chainId } = await optProvider.getNetwork();
 
   // Deploy to the forked network
   if (!onlyCheck) {
-    var ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
-    var optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
+    
+    const ethNodeForked = await spawnNode(l1RPC(NetworkType.Real), 8545, "l1ForkOutput.txt");
+    const optNodeForked = await spawnNode(l2RPC(NetworkType.Real), 9545, "l2ForkOutput.txt");
 
-    await burnL2DeployerNonces(optNode.rpcUrl, NUM_L1_DEPLOYED_CONTRACTS);
-    const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Forked)!);
+    await burnL2DeployerNonces(l2RPC(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
+    const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, l2RPC(NetworkType.Forked));
     saveArgs(govBridgeExecutorForked, deploymentConfig, 'l2GovExecutorDeployArgsForked.json')
 
     populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorForked, NetworkType.Forked);
@@ -81,8 +63,8 @@ async function main() {
     newContractsCfgForked = configFromArtifacts('deployResultForkedNetwork.json');
 
     setupStateMateEnvs(
-      ethereumRpc(NetworkType.Forked),
-      optimismRpc(NetworkType.Forked)
+      l1RPC(NetworkType.Forked),
+      l2RPC(NetworkType.Forked)
     );
     setupStateMateConfig(
       'automaton-sepolia-testnet.yaml',
@@ -98,8 +80,8 @@ async function main() {
     runIntegrationTest('op-pusher-pushing-token-rate.integration.test.ts');
     runIntegrationTest('optimism.integration.test.ts');
 
-    ethNode.process.kill();
-    optNode.process.kill();
+    ethNodeForked.process.kill();
+    optNodeForked.process.kill();
   }
 
   if (onlyForkDeploy) {
@@ -108,9 +90,9 @@ async function main() {
 
   // Deploy to the real network
   if (!onlyCheck) {
-    await burnL2DeployerNonces(optimismRpc(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
+    await burnL2DeployerNonces(l2RPC(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
 
-    const govBridgeExecutor = await deployGovExecutor(deploymentConfig, optimismRpc(NetworkType.Real)!);
+    const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2RPC(NetworkType.Real));
     saveArgs(govBridgeExecutor, deploymentConfig, 'l2GovExecutorDeployArgs.json')
 
     populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Real);
@@ -128,8 +110,8 @@ async function main() {
   const newContractsCfgReal = configFromArtifacts('deployResultRealNetwork.json');
 
   setupStateMateEnvs(
-    ethereumRpc(NetworkType.Real),
-    optimismRpc(NetworkType.Real)
+    l1RPC(NetworkType.Real),
+    l2RPC(NetworkType.Real)
   );
   setupStateMateConfig(
     'automaton-sepolia-testnet.yaml',
@@ -140,17 +122,17 @@ async function main() {
   runStateMate('automaton-sepolia-testnet.yaml');
 
   // diffyscan + bytecode on real
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, process.env.L1_REMOTE_RPC_URL!);
-  runDiffyscan('optimism_testnet_config_L1.json', false);
+  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, getRpcFromEnv("L1_REMOTE_RPC_URL"));
+  runDiffyscan('optimism_testnet_config_L1.json', true);
 
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, process.env.L2_REMOTE_RPC_URL!);
-  runDiffyscan('optimism_testnet_config_L2_gov.json', false);
-  runDiffyscan('optimism_testnet_config_L2.json', false);
+  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, getRpcFromEnv("L2_REMOTE_RPC_URL"));
+  runDiffyscan('optimism_testnet_config_L2_gov.json', true);
+  runDiffyscan('optimism_testnet_config_L2.json', true);
 
   // run forks
   // run l2 test on them
-  ethNode = await spawnTestNode(ethereumRpc(NetworkType.Real), 8545, "l1ForkAfterDeployOutput.txt");
-  optNode = await spawnTestNode(optimismRpc(NetworkType.Real), 9545, "l2ForkAfterDeployOutput.txt");
+  const ethNode = await spawnNode(l1RPC(NetworkType.Real), 8545, "l1ForkAfterDeployOutput.txt");
+  const optNode = await spawnNode(l2RPC(NetworkType.Real), 9545, "l2ForkAfterDeployOutput.txt");
 
   setupL2RepoTests(testingParameters, newContractsCfgReal["optimism"]["govBridgeExecutor"], newContractsCfgReal);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
@@ -167,6 +149,17 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
+function parseCmdLineArgs() {
+  program
+    .argument("<config-path>", "path to .yaml config file")
+    .option("--onlyCheck", "only check the real network deployment")
+    .option("--onlyForkDeploy", "only deploy to the forked network")
+    .parse();
+
+  const configPath = program.args[0];
+  return { configPath, onlyCheck: program.getOptionValue('onlyCheck'), onlyForkDeploy: program.getOptionValue('onlyForkDeploy') };
+}
+
 function loadYamlConfig(stateFile: string) {
   const file = path.resolve(stateFile);
   const configContent = fs.readFileSync(file, "utf-8");
@@ -177,43 +170,12 @@ function loadYamlConfig(stateFile: string) {
   return YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true });
 }
 
-function isUrl(maybeUrl: string) {
-  try {
-    new URL(maybeUrl);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-function logError(arg: unknown) {
-  console.error(`ERROR: ${arg}`);
-  console.error();
-  console.trace();
-}
-
-function logErrorAndExit(arg: unknown) {
-  logError(arg);
-  process.exit(1);
-}
-
-function readUrlOrFromEnv(urlOrEnvVarName: string) {
-  if (isUrl(urlOrEnvVarName)) {
-    return urlOrEnvVarName;
-  } else {
-    const valueFromEnv = process.env[urlOrEnvVarName] || "";
-    if (!isUrl(valueFromEnv)) {
-      logErrorAndExit(`Value "${valueFromEnv}" from env var "${urlOrEnvVarName}" is not a valid RPC url`);
-    }
-    return valueFromEnv;
-  }
-}
-
-export async function spawnTestNode(rpcUrl: string, port: number, outputFileName: string) {
+export async function spawnNode(rpcUrl: string, port: number, outputFileName: string) {
   const nodeCmd = 'anvil'
   const nodeArgs = [
     '--fork-url', `${rpcUrl}`,
     '-p', `${port}`,
+    '--no-storage-caching'
   ]
 
   const output = fs.createWriteStream(`./artifacts/${outputFileName}`);
@@ -244,20 +206,32 @@ export async function spawnTestNode(rpcUrl: string, port: number, outputFileName
   return { process, rpcUrl }
 }
 
-function rpcUrl(config: any, networkType: NetworkType) {
-  if (networkType == NetworkType.Real) {
-    return (config["rpcEthRemote"], config["rpcOptRemote"])
-  }
-  return  (config["rpcEthLocal"], config["rpcOptLocal"])
+function l1RPC(networkType: NetworkType) {
+  return networkType == NetworkType.Forked ? getRpcFromEnv("L1_LOCAL_RPC_URL") : getRpcFromEnv("L1_REMOTE_RPC_URL");
 }
 
-async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) {
-  const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
-  const l2Deployer = new ethers.Wallet(process.env.L2_DEPLOYER_PRIVATE_KEY!, l2Provider);
-  const l2DeployerAddress = await l2Deployer.getAddress()
-  console.log(`Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`)
-  for (let i = 0; i < numNonces; i++) {
-    const tx = await l2Deployer.sendTransaction({to: l2DeployerAddress, value: 0});
-    await tx.wait()
+function l2RPC(networkType: NetworkType) {
+  return networkType == NetworkType.Forked ? getRpcFromEnv("L2_LOCAL_RPC_URL") : getRpcFromEnv("L2_REMOTE_RPC_URL");
+}
+
+function getRpcFromEnv(rpcEnvName: string | undefined) {
+  if (rpcEnvName === undefined) {
+    console.error(`ERROR: Env "${rpcEnvName}" is undefined`);
+    process.exit(1);
+  }
+  const valueFromEnv = process.env[rpcEnvName] || "";
+  if (!isUrl(valueFromEnv)) {
+    console.error(`ERROR: Value "${valueFromEnv}" from env var "${rpcEnvName}" is not a valid RPC url`);
+    process.exit(1);
+  }
+  return valueFromEnv;
+}
+
+function isUrl(maybeUrl: string) {
+  try {
+    new URL(maybeUrl);
+    return true;
+  } catch (_) {
+    return false;
   }
 }

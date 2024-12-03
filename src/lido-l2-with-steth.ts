@@ -3,6 +3,7 @@ import * as child_process from 'node:child_process'
 import process from "node:process";
 import { NetworkType } from './types';
 import { readFileSync, cpSync } from "node:fs";
+import { ethers } from 'ethers';
 
 export function runDeployScript(throwOnFail: boolean = false) {
   const nodeCmd = 'ts-node';
@@ -19,6 +20,18 @@ export function runDeployScript(throwOnFail: boolean = false) {
 
   if (throwOnFail && result.status !== 0) {
     throw new Error(`Deploy script failed with exit code ${result.status}`);
+  }
+}
+
+export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) {
+  const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
+  const l2Deployer = new ethers.Wallet(process.env.L2_DEPLOYER_PRIVATE_KEY!, l2Provider);
+  const l2DeployerAddress = await l2Deployer.getAddress();
+  console.log(`Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`)
+  for (let i = 0; i < numNonces; i++) {
+    const tx = await l2Deployer.sendTransaction({to: l2DeployerAddress, value: 0});
+    console.log(`Burning ${i} tx`);
+    await tx.wait();
   }
 }
 
