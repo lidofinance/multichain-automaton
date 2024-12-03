@@ -50,26 +50,27 @@ async function main() {
   console.log("start");
 
   const { configPath, onlyCheck, onlyForkDeploy } = parseCmdLineArgs();
+  console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck}\n  - onlyForkDeploy: ${onlyForkDeploy}`);
 
   const config = loadYamlConfig(configPath);
   const deploymentConfig = config["deployParameters"];
   const testingParameters = config["testingParameters"];
   const statemateConfig = config["statemate"];
 
-  const optProvider = new ethers.JsonRpcProvider(l2RPC(NetworkType.Real));
-  const { chainId } = await optProvider.getNetwork();
+  const l2Provider = new ethers.JsonRpcProvider(l2Rpc(NetworkType.Real));
+  const { chainId } = await l2Provider.getNetwork();
 
   // Deploy to the forked network
   if (!onlyCheck) {    
-    const ethNodeForked = await spawnNode(l1RPC(NetworkType.Real), 8545, "l1ForkOutput.txt");
-    const optNodeForked = await spawnNode(l2RPC(NetworkType.Real), 9545, "l2ForkOutput.txt");
+    const l1ForkNode = await spawnNode(l1Rpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
+    const l2ForkNode = await spawnNode(l2Rpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
 
-    await burnL2DeployerNonces(l2RPC(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
-    const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, l2RPC(NetworkType.Forked));
+    await burnL2DeployerNonces(l2Rpc(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS);
+    const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, l2Rpc(NetworkType.Forked));
     saveArgs(govBridgeExecutorForked, deploymentConfig, "l2GovExecutorDeployArgsForked.json")
 
     populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorForked, NetworkType.Forked);
-    runDeployScript(true);
+    runDeployScript({ throwOnFail: true });
     copyDeploymentArtifacts("deployResult.json", "deployResultForkedNetwork.json");
     copyDeploymentArtifacts("l1DeployArgs.json", "l1DeployArgsForked.json");
     copyDeploymentArtifacts("l2DeployArgs.json", "l2DeployArgsForked.json");
@@ -78,7 +79,7 @@ async function main() {
     addGovExecutorToArtifacts(govBridgeExecutorForked, newContractsCfgForked, "deployResultForkedNetwork.json");
     newContractsCfgForked = configFromArtifacts("deployResultForkedNetwork.json");
 
-    setupStateMateEnvs(l1RPC(NetworkType.Forked), l2RPC(NetworkType.Forked));
+    setupStateMateEnvs(l1Rpc(NetworkType.Forked), l2Rpc(NetworkType.Forked));
     setupStateMateConfig("automaton-sepolia-testnet.yaml", newContractsCfgForked, statemateConfig, chainId);
     runStateMate("automaton-sepolia-testnet.yaml");
 
@@ -88,8 +89,8 @@ async function main() {
     runIntegrationTest("op-pusher-pushing-token-rate.integration.test.ts");
     runIntegrationTest("optimism.integration.test.ts");
 
-    ethNodeForked.process.kill();
-    optNodeForked.process.kill();
+    l1ForkNode.process.kill();
+    l2ForkNode.process.kill();
   }
 
   if (onlyForkDeploy) {
@@ -98,13 +99,13 @@ async function main() {
 
   // Deploy to the real network
   if (!onlyCheck) {
-    await burnL2DeployerNonces(l2RPC(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
+    await burnL2DeployerNonces(l2Rpc(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
 
-    const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2RPC(NetworkType.Real));
+    const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2Rpc(NetworkType.Real));
     saveArgs(govBridgeExecutor, deploymentConfig, "l2GovExecutorDeployArgs.json")
 
     populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Real);
-    runDeployScript();
+    runDeployScript({ throwOnFail: true });
     copyDeploymentArtifacts("deployResult.json", "deployResultRealNetwork.json");
     copyDeploymentArtifacts("l1DeployArgs.json", "l1DeployArgs.json");
     copyDeploymentArtifacts("l2DeployArgs.json", "l2DeployArgs.json");
@@ -117,7 +118,7 @@ async function main() {
   }
   const newContractsCfgReal = configFromArtifacts("deployResultRealNetwork.json");
 
-  setupStateMateEnvs(l1RPC(NetworkType.Real), l2RPC(NetworkType.Real));
+  setupStateMateEnvs(l1Rpc(NetworkType.Real), l2Rpc(NetworkType.Real));
   setupStateMateConfig("automaton-sepolia-testnet.yaml", newContractsCfgReal, statemateConfig, chainId);
   runStateMate("automaton-sepolia-testnet.yaml");
 
@@ -131,8 +132,8 @@ async function main() {
 
   // run forks
   // run l2 test on them
-  const ethNode = await spawnNode(l1RPC(NetworkType.Real), 8545, "l1ForkAfterDeployOutput.txt");
-  const optNode = await spawnNode(l2RPC(NetworkType.Real), 9545, "l2ForkAfterDeployOutput.txt");
+  const l1ForkNode = await spawnNode(l1Rpc(NetworkType.Real), 8545, "l1ForkAfterDeployOutput.txt");
+  const l2ForkNode = await spawnNode(l2Rpc(NetworkType.Real), 9545, "l2ForkAfterDeployOutput.txt");
 
   setupL2RepoTests(testingParameters, newContractsCfgReal["optimism"]["govBridgeExecutor"], newContractsCfgReal);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
@@ -140,8 +141,8 @@ async function main() {
   runIntegrationTest("op-pusher-pushing-token-rate.integration.test.ts");
   runIntegrationTest("optimism.integration.test.ts");
 
-  ethNode.process.kill();
-  optNode.process.kill();
+  l1ForkNode.process.kill();
+  l2ForkNode.process.kill();
 }
 
 main().catch((error) => {
@@ -195,11 +196,11 @@ async function spawnNode(rpcForkUrl: string, port: number, outputFileName: strin
   return { process: processInstance, rpcUrl: rpcForkUrl };
 }
 
-function l1RPC(networkType: NetworkType) {
+function l1Rpc(networkType: NetworkType) {
   return networkType == NetworkType.Forked ? getRpcFromEnv("L1_LOCAL_RPC_URL") : getRpcFromEnv("L1_REMOTE_RPC_URL");
 }
 
-function l2RPC(networkType: NetworkType) {
+function l2Rpc(networkType: NetworkType) {
   return networkType == NetworkType.Forked ? getRpcFromEnv("L2_LOCAL_RPC_URL") : getRpcFromEnv("L2_REMOTE_RPC_URL");
 }
 

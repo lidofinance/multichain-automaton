@@ -38,11 +38,10 @@ This command installs all necessary dependencies for the automaton and its submo
 
 Before running the script, set up your environment variables.
 
-#### Deployer Private Keys
+#### Deployer Private Key
 
 ```bash
-export L1_DEPLOYER_PRIVATE_KEY=<your-l1-deployer-private-key>
-export L2_DEPLOYER_PRIVATE_KEY=<your-l2-deployer-private-key>
+export DEPLOYER_PRIVATE_KEY=<your-deployer-private-key>
 ```
 
 #### RPC URLs

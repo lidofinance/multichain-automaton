@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import dotenv from "dotenv";
 import { NetworkType } from "./types";
 
-export function runDeployScript(throwOnFail: boolean = false) {
+export function runDeployScript(parameters: { throwOnFail: boolean }) {
   const nodeCmd = "ts-node";
   const nodeArgs = ["--files", "./scripts/optimism/deploy-automaton.ts"];
   console.debug(`\nRun deploy script: ${nodeCmd} ${nodeArgs.join(" ")}`);
@@ -15,14 +15,14 @@ export function runDeployScript(throwOnFail: boolean = false) {
     env: process.env,
   });
 
-  if (throwOnFail && result.status !== 0) {
+  if (parameters.throwOnFail && result.status !== 0) {
     throw new Error(`Deploy script failed with exit code ${result.status}`);
   }
 }
 
 export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) {
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
-  const l2Deployer = new ethers.Wallet(process.env.L2_DEPLOYER_PRIVATE_KEY!, l2Provider);
+  const l2Deployer = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, l2Provider);
   const l2DeployerAddress = await l2Deployer.getAddress();
   console.log(
     `Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`,
@@ -45,8 +45,8 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   dotenv.populate(
     process.env as { [key: string]: string },
     {
-      ETH_DEPLOYER_PRIVATE_KEY: process.env.L1_DEPLOYER_PRIVATE_KEY ?? "",
-      OPT_DEPLOYER_PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY ?? "",
+      ETH_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
+      OPT_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
 
       RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL ?? "",
       RPC_OPT_SEPOLIA: process.env.L2_REMOTE_RPC_URL ?? "",
@@ -205,7 +205,7 @@ export function runVerificationGovExecutor(fileName: string, networkName: string
     {
       OPTIMISTIC_ETHERSCAN_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
       ALCHEMY_KEY: process.env.ALCHEMY_KEY ?? "",
-      PRIVATE_KEY: process.env.L2_DEPLOYER_PRIVATE_KEY ?? "",
+      PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
     },
     { override: true },
   );
