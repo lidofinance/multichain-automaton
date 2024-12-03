@@ -1,21 +1,58 @@
 {
   "name": "multichain-automaton",
+  "version": "0.0.1",
+  "description": "Multichain Automation for stETH and wstETH bridge deployments on OP-stack compatible networks",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "packageManager": "yarn@4.5.1",
   "scripts": {
-    "start": "ts-node src/deploy.ts"
+    "lint:ts": "eslint . --max-warnings=10",
+    "lint:ts:fix": "yarn lint:ts --fix",
+    "lint": "yarn lint:ts",
+    "format": "prettier . --write",
+    "typecheck": "tsc src/*.ts --noEmit",
+    "prepare": "husky",
+    "start": "ts-node src/deploy.ts",
+    "postinstall": "cd diffyscan && npm install && poetry install && cd ../lido-l2-with-steth && npm install && npm run compile && cd ../state-mate && yarn && cd ../governance-crosschain-bridges && npm install && npm run compile && cd .. && mkdir -p artifacts"
+  },
+  "lint-staged": {
+    "./**/*.ts": [
+      "eslint --max-warnings=10"
+    ],
+    "./**/*.{ts,md,json}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.4",
-    "yaml": "^2.6.0"
+    "postinstall": "^0.11.0",
+    "yaml": "^2.6.1"
   },
   "devDependencies": {
-    "@types/node": "^22.7.8",
-    "hardhat": "^2.22.14",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@eslint/compat": "^1.1.1",
+    "@eslint/js": "^9.11.1",
+    "@types/node": "^22.9.1",
+    "eslint": "^9.11.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-no-only-tests": "^3.3.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-simple-import-sort": "12.1.1",
+    "hardhat": "^2.22.16",
     "hardhat-deploy": "^0.14.0",
+    "hardhat-tracer": "3.1.0",
+    "hardhat-watcher": "2.5.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.7.0"
   }
 }

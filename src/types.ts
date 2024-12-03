@@ -1,4 +1,4 @@
 export enum NetworkType {
   Real,
-  Forked
+  Forked,
 }
