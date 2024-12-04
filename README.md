@@ -46,11 +46,24 @@ export DEPLOYER_PRIVATE_KEY=<your-deployer-private-key>
 
 #### RPC URLs
 
+Set up remote RPC URLs to run local testnet nodes that forks real network state.
+
 ```bash
 export L1_REMOTE_RPC_URL=<your-l1-remote-rpc-url>
 export L2_REMOTE_RPC_URL=<your-l2-remote-rpc-url>
-export L1_LOCAL_RPC_URL=<your-l1-local-rpc-url>
-export L2_LOCAL_RPC_URL=<your-l2-local-rpc-url>
+```
+
+Set up local port numbers for running forked nodes.
+
+```bash
+export L1_LOCAL_RPC_PORT=<your-l1-local-rpc-port>
+export L2_LOCAL_RPC_PORT=<your-l2-local-rpc-port>
+```
+
+Set up port number to run diffyscan fork.
+
+```bash
+export DIFFYSCAN_RPC_PORT=<rpc-port-for-diffyscan-fork>
 ```
 
 #### API Tokens

@@ -3,7 +3,7 @@ import { cpSync, readFileSync } from "node:fs";
 import process from "node:process";
 import { ethers } from 'ethers';
 import dotenv from "dotenv";
-import { NetworkType } from "./types";
+import { NetworkType } from "./rpc-utils";
 
 export function runDeployScript(parameters: { throwOnFail: boolean }) {
   const nodeCmd = "ts-node";

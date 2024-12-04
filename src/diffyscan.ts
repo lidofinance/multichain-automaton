@@ -1,6 +1,7 @@
 import * as child_process from "node:child_process";
 import fs from "node:fs";
 import process from "node:process";
+import { diffyscanRpcUrl } from "./rpc-utils";
 
 import dotenv from "dotenv";
 
@@ -25,7 +26,7 @@ export function setupDiffyscan(
       ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN ?? "",
       OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN ?? "",
       REMOTE_RPC_URL: remoteRpcUrl,
-      LOCAL_RPC_URL: process.env.LOCAL_RPC_URL_DIFFYSCAN ?? "",
+      LOCAL_RPC_URL: diffyscanRpcUrl(),
       GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN ?? "",
     },
     { override: true },

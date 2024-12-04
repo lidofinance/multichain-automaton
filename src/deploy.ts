@@ -24,7 +24,7 @@ import {
   setupL2RepoTests,
 } from "./lido-l2-with-steth";
 import { runStateMate, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
-import { NetworkType } from "./types";
+import { NetworkType, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort } from "./rpc-utils";
 
 export type ChildProcess = child_process.ChildProcessWithoutNullStreams;
 export type TestNode = { process: ChildProcess; rpcUrl: string };
@@ -57,16 +57,17 @@ async function main() {
   const testingParameters = config["testingParameters"];
   const statemateConfig = config["statemate"];
 
-  const l2Provider = new ethers.JsonRpcProvider(l2Rpc(NetworkType.Real));
+  const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl(NetworkType.Real));
   const { chainId } = await l2Provider.getNetwork();
 
   // Deploy to the forked network
   if (!onlyCheck) {    
-    const l1ForkNode = await spawnNode(l1Rpc(NetworkType.Real), 8545, "l1ForkOutput.txt");
-    const l2ForkNode = await spawnNode(l2Rpc(NetworkType.Real), 9545, "l2ForkOutput.txt");
+    const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), localL1RpcPort(), "l1ForkOutput.txt");
+    const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), localL2RpcPort(), "l2ForkOutput.txt");
 
-    await burnL2DeployerNonces(l2Rpc(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS);
-    const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, l2Rpc(NetworkType.Forked));
+    await burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS);
+
+    const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Forked));
     saveArgs(govBridgeExecutorForked, deploymentConfig, "l2GovExecutorDeployArgsForked.json")
 
     populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorForked, NetworkType.Forked);
@@ -79,7 +80,7 @@ async function main() {
     addGovExecutorToArtifacts(govBridgeExecutorForked, newContractsCfgForked, "deployResultForkedNetwork.json");
     newContractsCfgForked = configFromArtifacts("deployResultForkedNetwork.json");
 
-    setupStateMateEnvs(l1Rpc(NetworkType.Forked), l2Rpc(NetworkType.Forked));
+    setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
     setupStateMateConfig("automaton-sepolia-testnet.yaml", newContractsCfgForked, statemateConfig, chainId);
     runStateMate("automaton-sepolia-testnet.yaml");
 
@@ -99,9 +100,9 @@ async function main() {
 
   // Deploy to the real network
   if (!onlyCheck) {
-    await burnL2DeployerNonces(l2Rpc(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
+    await burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
 
-    const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2Rpc(NetworkType.Real));
+    const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Real));
     saveArgs(govBridgeExecutor, deploymentConfig, "l2GovExecutorDeployArgs.json")
 
     populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Real);
@@ -118,22 +119,22 @@ async function main() {
   }
   const newContractsCfgReal = configFromArtifacts("deployResultRealNetwork.json");
 
-  setupStateMateEnvs(l1Rpc(NetworkType.Real), l2Rpc(NetworkType.Real));
+  setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
   setupStateMateConfig("automaton-sepolia-testnet.yaml", newContractsCfgReal, statemateConfig, chainId);
   runStateMate("automaton-sepolia-testnet.yaml");
 
   // diffyscan + bytecode on real
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, getRpcFromEnv("L1_REMOTE_RPC_URL"));
+  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real));
   runDiffyscan("optimism_testnet_config_L1.json", true);
 
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, getRpcFromEnv("L2_REMOTE_RPC_URL"));
+  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real));
   runDiffyscan("optimism_testnet_config_L2_gov.json", true);
   runDiffyscan("optimism_testnet_config_L2.json", true);
 
   // run forks
   // run l2 test on them
-  const l1ForkNode = await spawnNode(l1Rpc(NetworkType.Real), 8545, "l1ForkAfterDeployOutput.txt");
-  const l2ForkNode = await spawnNode(l2Rpc(NetworkType.Real), 9545, "l2ForkAfterDeployOutput.txt");
+  const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
+  const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
 
   setupL2RepoTests(testingParameters, newContractsCfgReal["optimism"]["govBridgeExecutor"], newContractsCfgReal);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
@@ -196,33 +197,3 @@ async function spawnNode(rpcForkUrl: string, port: number, outputFileName: strin
   return { process: processInstance, rpcUrl: rpcForkUrl };
 }
 
-function l1Rpc(networkType: NetworkType) {
-  return networkType == NetworkType.Forked ? getRpcFromEnv("L1_LOCAL_RPC_URL") : getRpcFromEnv("L1_REMOTE_RPC_URL");
-}
-
-function l2Rpc(networkType: NetworkType) {
-  return networkType == NetworkType.Forked ? getRpcFromEnv("L2_LOCAL_RPC_URL") : getRpcFromEnv("L2_REMOTE_RPC_URL");
-}
-
-function getRpcFromEnv(rpcEnvName: string | undefined) {
-  if (rpcEnvName === undefined) {
-    console.error(`ERROR: Env "${rpcEnvName}" is undefined`);
-    process.exit(1);
-  }
-  const valueFromEnv = process.env[rpcEnvName] || "";
-  if (!isUrl(valueFromEnv)) {
-    console.error(`ERROR: Value "${valueFromEnv}" from env var "${rpcEnvName}" is not a valid RPC url`);
-    process.exit(1);
-  }
-  return valueFromEnv;
-}
-
-function isUrl(maybeUrl: string) {
-  try {
-    new URL(maybeUrl);
-    return true;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (_) {
-    return false;
-  }
-}
