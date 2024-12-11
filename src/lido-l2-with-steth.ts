@@ -205,9 +205,11 @@ export function runVerificationGovExecutor(fileName: string, networkName: string
   dotenv.populate(
     process.env as { [key: string]: string },
     {
-      OPTIMISTIC_ETHERSCAN_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
-      ALCHEMY_KEY: process.env.ALCHEMY_KEY ?? "",
-      PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
+      L2_PRC_URL: process.env.L2_REMOTE_RPC_URL ?? "",
+      L2_BLOCK_EXPLORER_API_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
+      L2_CHAIN_ID: process.env.L2_CHAIN_ID ?? "",
+      L2_BLOCK_EXPLORER_API_URL: process.env.L2_BLOCK_EXPLORER_API_URL ?? "",
+      L2_BLOCK_EXPLORER_BROWSER_URL: process.env.L2_BLOCK_EXPLORER_BROWSER_URL ?? "",
     },
     { override: true },
   );
