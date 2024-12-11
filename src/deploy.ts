@@ -24,7 +24,7 @@ import {
   setupL2RepoTests,
 } from "./lido-l2-with-steth";
 import { runStateMate, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
-import { NetworkType, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort } from "./rpc-utils";
+import { NetworkType, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, diffyscanRpcUrl } from "./rpc-utils";
 
 export type ChildProcess = child_process.ChildProcessWithoutNullStreams;
 export type TestNode = { process: ChildProcess; rpcUrl: string };
@@ -53,6 +53,7 @@ async function main() {
   console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck}\n  - onlyForkDeploy: ${onlyForkDeploy}`);
 
   const config = loadYamlConfig(configPath);
+  
   const deploymentConfig = config["deployParameters"];
   const testingParameters = config["testingParameters"];
   const statemateConfig = config["statemate"];
@@ -62,8 +63,8 @@ async function main() {
 
   // Deploy to the forked network
   if (!onlyCheck) {    
-    const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), localL1RpcPort(), "l1ForkOutput.txt");
-    const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), localL2RpcPort(), "l2ForkOutput.txt");
+    const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), Number(process.env.L1_CHAIN_ID), localL1RpcPort(), "l1ForkOutput.txt");
+    const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), Number(process.env.L2_CHAIN_ID), localL2RpcPort(), "l2ForkOutput.txt");
 
     await burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS);
 
@@ -111,9 +112,9 @@ async function main() {
     copyDeploymentArtifacts("l1DeployArgs.json", "l1DeployArgs.json");
     copyDeploymentArtifacts("l2DeployArgs.json", "l2DeployArgs.json");
 
-    await runVerification("l1DeployArgs.json", "eth_sepolia");
-    await runVerification("l2DeployArgs.json", "uni_sepolia");
-    await runVerificationGovExecutor("l2GovExecutorDeployArgs.json", "uni_sepolia");
+    await runVerification("l1DeployArgs.json", "l1");
+    await runVerification("l2DeployArgs.json", "l2");
+    await runVerificationGovExecutor("l2GovExecutorDeployArgs.json", "l2");
     const newContractsCfgReal = configFromArtifacts("deployResultRealNetwork.json");
     addGovExecutorToArtifacts(govBridgeExecutor, newContractsCfgReal, "deployResultRealNetwork.json");
   }
@@ -124,17 +125,17 @@ async function main() {
   runStateMate("automaton-sepolia-testnet.yaml");
 
   // diffyscan + bytecode on real
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real));
+  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl());
   runDiffyscan("optimism_testnet_config_L1.json", true);
 
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real));
+  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl());
   runDiffyscan("optimism_testnet_config_L2_gov.json", true);
   runDiffyscan("optimism_testnet_config_L2.json", true);
 
   // run forks
   // run l2 test on them
-  const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
-  const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
+  const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), Number(process.env.L1_CHAIN_ID), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
+  const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), Number(process.env.L2_CHAIN_ID), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
 
   setupL2RepoTests(testingParameters, newContractsCfgReal["optimism"]["govBridgeExecutor"], newContractsCfgReal);
   runIntegrationTest("bridging-non-rebasable.integration.test.ts");
@@ -161,9 +162,9 @@ function loadYamlConfig(stateFile: string) {
   return YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true });
 }
 
-async function spawnNode(rpcForkUrl: string, port: number, outputFileName: string) {
+async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outputFileName: string) {
   const nodeCmd = "anvil";
-  const nodeArgs = ["--fork-url", `${rpcForkUrl}`, "-p", `${port}`, "--no-storage-caching"];
+  const nodeArgs = ["--fork-url", `${rpcForkUrl}`, "-p", `${port}`, "--no-storage-caching", "--chain-id", `${chainId}`];
 
   const output = fs.createWriteStream(`./artifacts/${outputFileName}`);
   await once(output, "open");

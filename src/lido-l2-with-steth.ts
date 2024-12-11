@@ -45,25 +45,28 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   dotenv.populate(
     process.env as { [key: string]: string },
     {
-      ETH_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
-      OPT_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
-
-      RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL ?? "",
-      RPC_OPT_SEPOLIA: process.env.L2_REMOTE_RPC_URL ?? "",
-      NETWORK: deploymentConfig["network"],
       FORKING: networkType == NetworkType.Forked ? "true" : "false",
 
+      L1_CHAIN_ID: process.env.L1_CHAIN_ID ?? "",
+      L2_CHAIN_ID: process.env.L2_CHAIN_ID ?? "",
+
+      L1_PRC_URL: process.env.L1_REMOTE_RPC_URL ?? "",
+      L2_PRC_URL: process.env.L2_REMOTE_RPC_URL ?? "",
+
+      L1_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
+      L2_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
+
+
       // L1
+      L1_CROSSDOMAIN_MESSENGER: ethereumConfig["tokenBridge"]["messenger"],
       L1_PROXY_ADMIN: ethereumConfig["proxyAdmin"],
 
-      ACCOUNTING_ORACLE: ethereumConfig["tokenBridge"]["accountingOracle"],
-      L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE:
-        deploymentConfig["ethereum"]["opStackTokenRatePusher"]["l2GasLimitForPushingTokenRate"],
-
-      L1_BRIDGE_ADMIN: ethereumConfig["tokenBridge"]["bridgeAdmin"],
-      L1_CROSSDOMAIN_MESSENGER: ethereumConfig["tokenBridge"]["messenger"],
       L1_NON_REBASABLE_TOKEN: ethereumConfig["tokenBridge"]["l1NonRebasableToken"],
       L1_REBASABLE_TOKEN: ethereumConfig["tokenBridge"]["l1RebasableToken"],
+      ACCOUNTING_ORACLE: ethereumConfig["tokenBridge"]["accountingOracle"],
+      L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE: ethereumConfig["opStackTokenRatePusher"]["l2GasLimitForPushingTokenRate"],
+
+      L1_BRIDGE_ADMIN: ethereumConfig["tokenBridge"]["bridgeAdmin"],
       L1_DEPOSITS_ENABLED: ethereumConfig["tokenBridge"]["depositsEnabled"],
       L1_WITHDRAWALS_ENABLED: ethereumConfig["tokenBridge"]["withdrawalsEnabled"],
       L1_DEPOSITS_ENABLERS: formattedArray(ethereumConfig["tokenBridge"]["depositsEnablers"]),
@@ -72,9 +75,9 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
       L1_WITHDRAWALS_DISABLERS: formattedArray(ethereumConfig["tokenBridge"]["withdrawalsDisablers"]),
 
       // L2
+      L2_CROSSDOMAIN_MESSENGER: optimismConfig["tokenBridge"]["messenger"],
       L2_PROXY_ADMIN: govBridgeExecutor,
 
-      TOKEN_RATE_ORACLE_PROXY_ADMIN: govBridgeExecutor,
       TOKEN_RATE_ORACLE_ADMIN: govBridgeExecutor,
       TOKEN_RATE_UPDATE_ENABLED: optimismConfig["tokenRateOracle"]["updateEnabled"],
       TOKEN_RATE_UPDATE_ENABLERS: formattedArray([
@@ -87,8 +90,7 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
       ]),
       TOKEN_RATE_OUTDATED_DELAY: optimismConfig["tokenRateOracle"]["tokenRateOutdatedDelay"],
       MAX_ALLOWED_L2_TO_L1_CLOCK_LAG: optimismConfig["tokenRateOracle"]["maxAllowedL2ToL1ClockLag"],
-      MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP:
-        optimismConfig["tokenRateOracle"]["maxAllowedTokenRateDeviationPerDayBp"],
+      MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP: optimismConfig["tokenRateOracle"]["maxAllowedTokenRateDeviationPerDayBp"],
       OLDEST_RATE_ALLOWED_IN_PAUSE_TIME_SPAN: optimismConfig["tokenRateOracle"]["oldestRateAllowedInPauseTimeSpan"],
       MIN_TIME_BETWEEN_TOKEN_RATE_UPDATES: optimismConfig["tokenRateOracle"]["minTimeBetweenTokenRateUpdates"],
       INITIAL_TOKEN_RATE_VALUE: optimismConfig["tokenRateOracle"]["initialTokenRateValue"],
@@ -116,7 +118,6 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
         govBridgeExecutor,
       ]),
 
-      L2_CROSSDOMAIN_MESSENGER: optimismConfig["tokenBridge"]["messenger"],
 
       L2_DEPLOY_SKIP_PROMPTS: "1",
     },
@@ -127,7 +128,6 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: string, newContractsCfg: any) {
   dotenv.populate(process.env as { [key: string]: string }, {
-    TESTING_OPT_NETWORK: "sepolia",
     TESTING_USE_DEPLOYED_CONTRACTS: "true",
     TESTING_OPT_L1_LIDO: testingParameters["lido"],
     TESTING_OPT_L1_REBASABLE_TOKEN: testingParameters["l1RebasableToken"],
@@ -173,10 +173,12 @@ export function runVerification(fileName: string, networkName: string) {
   dotenv.populate(
     process.env as { [key: string]: string },
     {
-      ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN ?? "",
-      ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN ?? "",
-      RPC_ETH_SEPOLIA: process.env.L1_REMOTE_RPC_URL ?? "",
-      RPC_UNI_SEPOLIA: process.env.L2_REMOTE_RPC_URL ?? "",
+      L1_BLOCK_EXPLORER_API_KEY: process.env.L1_EXPLORER_TOKEN ?? "",
+      L2_BLOCK_EXPLORER_API_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
+      L1_BLOCK_EXPLORER_BROWSER_URL: process.env.L1_BLOCK_EXPLORER_BROWSER_URL ?? "",
+      L2_BLOCK_EXPLORER_BROWSER_URL: process.env.L2_BLOCK_EXPLORER_BROWSER_URL ?? "",
+      L1_BLOCK_EXPLORER_API_URL: process.env.L1_BLOCK_EXPLORER_API_URL ?? "",
+      L2_BLOCK_EXPLORER_API_URL: process.env.L2_BLOCK_EXPLORER_API_URL ?? "",
     },
     { override: true },
   );

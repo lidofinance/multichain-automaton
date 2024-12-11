@@ -13,7 +13,6 @@ statemate:
   l1CrossDomainMessenger: *l1CrossDomainMessenger
 
 deployParameters:
-  network: sepolia
   forking: true
   ethereum:
     proxyAdmin: *agent

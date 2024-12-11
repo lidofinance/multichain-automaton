@@ -1,7 +1,6 @@
 import * as child_process from "node:child_process";
 import fs from "node:fs";
 import process from "node:process";
-import { diffyscanRpcUrl } from "./rpc-utils";
 
 import dotenv from "dotenv";
 
@@ -14,6 +13,7 @@ export function setupDiffyscan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   deploymentConfig: any,
   remoteRpcUrl: string,
+  localRpcUrl: string
 ) {
   dotenv.populate(
     process.env as { [key: string]: string },
@@ -26,7 +26,7 @@ export function setupDiffyscan(
       ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN ?? "",
       OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN ?? "",
       REMOTE_RPC_URL: remoteRpcUrl,
-      LOCAL_RPC_URL: diffyscanRpcUrl(),
+      LOCAL_RPC_URL: localRpcUrl,
       GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN ?? "",
     },
     { override: true },
