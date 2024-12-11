@@ -52,11 +52,10 @@ async function main() {
   const { configPath, onlyCheck, onlyForkDeploy } = parseCmdLineArgs();
   console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck}\n  - onlyForkDeploy: ${onlyForkDeploy}`);
 
-  const config = loadYamlConfig(configPath);
+  const { mainConfig, mainConfigDoc } = loadYamlConfig(configPath);
   
-  const deploymentConfig = config["deployParameters"];
-  const testingParameters = config["testingParameters"];
-  const statemateConfig = config["statemate"];
+  const deploymentConfig = mainConfig["deployParameters"];
+  const testingParameters = mainConfig["testingParameters"];
 
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl(NetworkType.Real));
   const { chainId } = await l2Provider.getNetwork();
@@ -82,8 +81,8 @@ async function main() {
     newContractsCfgForked = configFromArtifacts("deployResultForkedNetwork.json");
 
     setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
-    setupStateMateConfig("automaton-sepolia-testnet.yaml", newContractsCfgForked, statemateConfig, chainId);
-    runStateMate("automaton-sepolia-testnet.yaml");
+    setupStateMateConfig("automaton.yaml", newContractsCfgForked, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
+    runStateMate("automaton.yaml");
 
     setupL2RepoTests(testingParameters, govBridgeExecutorForked, newContractsCfgForked);
     runIntegrationTest("bridging-non-rebasable.integration.test.ts");
@@ -94,7 +93,7 @@ async function main() {
     l1ForkNode.process.kill();
     l2ForkNode.process.kill();
   }
-
+  
   if (onlyForkDeploy) {
     return;
   }
@@ -121,8 +120,8 @@ async function main() {
   const newContractsCfgReal = configFromArtifacts("deployResultRealNetwork.json");
 
   setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
-  setupStateMateConfig("automaton-sepolia-testnet.yaml", newContractsCfgReal, statemateConfig, chainId);
-  runStateMate("automaton-sepolia-testnet.yaml");
+  setupStateMateConfig("automaton.yaml", newContractsCfgReal, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
+  runStateMate("automaton.yaml");
 
   // diffyscan + bytecode on real
   setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl());
@@ -159,7 +158,10 @@ function loadYamlConfig(stateFile: string) {
     return typeof v === "bigint" ? String(v) : v;
   };
 
-  return YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true });
+  return {
+    mainConfig: YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true }),
+    mainConfigDoc: YAML.parseDocument(configContent, { intAsBigInt: true })
+  };
 }
 
 async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outputFileName: string) {

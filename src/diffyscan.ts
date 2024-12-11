@@ -32,8 +32,8 @@ export function setupDiffyscan(
     { override: true },
   );
 
-  const ethereumConfig = deploymentConfig["ethereum"];
-  const optimismConfig = deploymentConfig["optimism"];
+  const ethereumConfig = deploymentConfig["l1"];
+  const optimismConfig = deploymentConfig["l2"];
 
   // ethereum
   const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L1.json`;

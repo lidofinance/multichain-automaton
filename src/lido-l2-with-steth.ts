@@ -39,8 +39,8 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   function formattedArray(configArray: Array<string>) {
     return `[${configArray.map((ts: string) => `"${ts.toString()}"`)}]`;
   }
-  const ethereumConfig = deploymentConfig["ethereum"];
-  const optimismConfig = deploymentConfig["optimism"];
+  const ethereumConfig = deploymentConfig["l1"];
+  const optimismConfig = deploymentConfig["l2"];
 
   dotenv.populate(
     process.env as { [key: string]: string },

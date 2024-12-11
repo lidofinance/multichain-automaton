@@ -18,7 +18,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY ?? "", provider);
   const ContractFactory = new ethers.ContractFactory(abi, bytecode, wallet);
 
-  const govBridgeExecutorConfig = deploymentConfig["optimism"]["govBridgeExecutor"];
+  const govBridgeExecutorConfig = deploymentConfig["l2"]["govBridgeExecutor"];
   const contract = await ContractFactory.deploy(
     govBridgeExecutorConfig["ovmL2Messenger"],
     govBridgeExecutorConfig["ethereumGovExecutor"],
@@ -43,7 +43,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function saveArgs(contractAddress: string, deploymentConfig: any, fileName: string) {
-  const govBridgeExecutorConfig = deploymentConfig["optimism"]["govBridgeExecutor"];
+  const govBridgeExecutorConfig = deploymentConfig["l2"]["govBridgeExecutor"];
 
   const content = {
     [contractAddress]: [
