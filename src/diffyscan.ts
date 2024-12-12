@@ -4,7 +4,7 @@ import process from "node:process";
 
 import dotenv from "dotenv";
 
-const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/unichain";
+const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
 
 export function setupDiffyscan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,13 +18,10 @@ export function setupDiffyscan(
   dotenv.populate(
     process.env as { [key: string]: string },
     {
-      // l2-steth
-      ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN ?? "",
-      ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN ?? "",
-      RPC_UNI_SEPOLIA: remoteRpcUrl,
-      // diffyscan
       ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN ?? "",
       OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN ?? "",
+      L1_EXPLORER_API_HOSTNAME: process.env.L1_BLOCK_EXPLORER_API_HOST ?? "",
+      L2_EXPLORER_API_HOSTNAME: process.env.L2_BLOCK_EXPLORER_API_HOST ?? "",
       REMOTE_RPC_URL: remoteRpcUrl,
       LOCAL_RPC_URL: localRpcUrl,
       GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN ?? "",
@@ -36,7 +33,7 @@ export function setupDiffyscan(
   const optimismConfig = deploymentConfig["l2"];
 
   // ethereum
-  const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L1.json`;
+  const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/automaton_config_L1.json`;
   const optimismTestnetConfigL1 = JSON.parse(fs.readFileSync(fileNameL1, "utf8"));
   optimismTestnetConfigL1["contracts"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: "OssifiableProxy",
@@ -67,12 +64,12 @@ export function setupDiffyscan(
     ],
   };
   fs.writeFileSync(
-    "./artifacts/configs/optimism_testnet_config_L1.json",
+    "./artifacts/configs/automaton_config_L1.json",
     JSON.stringify(optimismTestnetConfigL1, null, 2),
   );
 
   // gov executor
-  const fileNameL2Gov = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2_gov.json`;
+  const fileNameL2Gov = `${UNICHAIN_CONFIGS_PATH}/automaton_config_L2_gov.json`;
   const optimismTestnetConfigL2Gov = JSON.parse(fs.readFileSync(fileNameL2Gov, "utf8"));
   optimismTestnetConfigL2Gov["contracts"] = {
     [govBridgeExecutor]: "OptimismBridgeExecutor",
@@ -89,12 +86,12 @@ export function setupDiffyscan(
     ],
   };
   fs.writeFileSync(
-    "./artifacts/configs/optimism_testnet_config_L2_gov.json",
+    "./artifacts/configs/automaton_config_L2_gov.json",
     JSON.stringify(optimismTestnetConfigL2Gov, null, 2),
   );
 
   // optimism
-  const fileNameL2 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2.json`;
+  const fileNameL2 = `${UNICHAIN_CONFIGS_PATH}/automaton_config_L2.json`;
   const optimismTestnetConfigL2 = JSON.parse(fs.readFileSync(fileNameL2, "utf8"));
   optimismTestnetConfigL2["contracts"] = {
     [newContractsCfg["optimism"]["tokenRateOracleProxyAddress"]]: "OssifiableProxy",
@@ -164,18 +161,27 @@ export function setupDiffyscan(
   };
 
   fs.writeFileSync(
-    "./artifacts/configs/optimism_testnet_config_L2.json",
+    "./artifacts/configs/automaton_config_L2.json",
     JSON.stringify(optimismTestnetConfigL2, null, 2),
   );
 }
 
-export function runDiffyscan(configName: string, withBinaryComparison: boolean) {
+export function runDiffyscan(configName: string, chainID: string, withBinaryComparison: boolean) {
+
+  dotenv.populate(
+    process.env as { [key: string]: string },
+    {
+      CHAIN_ID: chainID
+    },
+    { override: true },
+  );
+
   const nodeCmd = "poetry";
   const nodeArgs = [
     "run",
     "diffyscan",
     `../artifacts/configs/${configName}`,
-    "./hardhat_configs/sepolia_unichain_hardhat_config.js",
+    "./hardhat_configs/automaton_hardhat_config.js",
     "--yes",
   ];
   if (withBinaryComparison) {

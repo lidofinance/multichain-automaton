@@ -125,11 +125,11 @@ async function main() {
 
   // diffyscan + bytecode on real
   setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl());
-  runDiffyscan("optimism_testnet_config_L1.json", true);
+  runDiffyscan("automaton_config_L1.json", process.env.L1_CHAIN_ID ?? "", true);
 
   setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl());
-  runDiffyscan("optimism_testnet_config_L2_gov.json", true);
-  runDiffyscan("optimism_testnet_config_L2.json", true);
+  runDiffyscan("automaton_config_L2_gov.json", process.env.L2_CHAIN_ID ?? "", true);
+  runDiffyscan("automaton_config_L2.json", process.env.L2_CHAIN_ID ?? "", true);
 
   // run forks
   // run l2 test on them

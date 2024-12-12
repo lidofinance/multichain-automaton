@@ -177,8 +177,8 @@ export function runVerification(fileName: string, networkName: string) {
       L2_BLOCK_EXPLORER_API_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
       L1_BLOCK_EXPLORER_BROWSER_URL: process.env.L1_BLOCK_EXPLORER_BROWSER_URL ?? "",
       L2_BLOCK_EXPLORER_BROWSER_URL: process.env.L2_BLOCK_EXPLORER_BROWSER_URL ?? "",
-      L1_BLOCK_EXPLORER_API_URL: process.env.L1_BLOCK_EXPLORER_API_URL ?? "",
-      L2_BLOCK_EXPLORER_API_URL: process.env.L2_BLOCK_EXPLORER_API_URL ?? "",
+      L1_BLOCK_EXPLORER_API_URL: `https://${process.env.L1_BLOCK_EXPLORER_API_URL ?? ""}/api`,
+      L2_BLOCK_EXPLORER_API_URL: `https://${process.env.L2_BLOCK_EXPLORER_API_URL ?? ""}/api`,
     },
     { override: true },
   );
