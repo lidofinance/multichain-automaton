@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import fs from "node:fs";
 import process from "node:process";
-
 import chalk from "chalk";
 import { ethers } from "ethers";
 
@@ -42,7 +41,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function saveArgs(contractAddress: string, deploymentConfig: any, fileName: string) {
+export function saveGovExecutorDeploymentArgs(contractAddress: string, deploymentConfig: any, fileName: string) {
   const govBridgeExecutorConfig = deploymentConfig["l2"]["govBridgeExecutor"];
 
   const content = {
@@ -61,7 +60,17 @@ export function saveArgs(contractAddress: string, deploymentConfig: any, fileNam
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function addGovExecutorToArtifacts(govBridgeExecutor: string, newContractsConfig: any, fileName: string) {
+export function addGovExecutorToDeploymentArtifacts(govBridgeExecutor: string, deploymentResultsFilename: string) {
+  let newContractsConfig = configFromArtifacts(deploymentResultsFilename);
   newContractsConfig["optimism"]["govBridgeExecutor"] = govBridgeExecutor;
-  fs.writeFileSync(`./artifacts/${fileName}`, JSON.stringify(newContractsConfig, null, 2));
+  fs.writeFileSync(`./artifacts/${deploymentResultsFilename}`, JSON.stringify(newContractsConfig, null, 2));
+}
+
+function configFromArtifacts(fileName: string) {
+  const data = readFileSync(`./artifacts/${fileName}`, "utf8");
+  try {
+    return JSON.parse(data);
+  } catch (error) {
+    throw new Error(`can't parse deploy file ${fileName}: ${(error as Error).message}`);
+  }
 }

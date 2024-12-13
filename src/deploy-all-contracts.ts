@@ -1,24 +1,9 @@
-import * as child_process from "node:child_process";
 import { cpSync, readFileSync } from "node:fs";
 import process from "node:process";
-import { ethers } from 'ethers';
 import dotenv from "dotenv";
+import { ethers } from 'ethers';
 import { NetworkType } from "./rpc-utils";
-
-export function runDeployScript(parameters: { throwOnFail: boolean }) {
-  const nodeCmd = "ts-node";
-  const nodeArgs = ["--files", "./scripts/optimism/deploy-automaton.ts"];
-  console.debug(`\nRun deploy script: ${nodeCmd} ${nodeArgs.join(" ")}`);
-  const result = child_process.spawnSync(nodeCmd, nodeArgs, {
-    cwd: "./lido-l2-with-steth",
-    stdio: "inherit",
-    env: process.env,
-  });
-
-  if (parameters.throwOnFail && result.status !== 0) {
-    throw new Error(`Deploy script failed with exit code ${result.status}`);
-  }
-}
+import { runCommand } from "./command-utils";
 
 export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) {
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
@@ -28,10 +13,41 @@ export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) 
     `Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`,
   );
   for (let i = 0; i < numNonces; i++) {
-    const tx = await l2Deployer.sendTransaction({ to: l2DeployerAddress, value: 0 });
-    console.log(`Burning ${i} tx`);
-    await tx.wait();
+    let numTries = 3;
+    while (true) {
+      try {
+        console.log(`Burning ${i} tx, try num ${numTries}`);
+        const tx = await l2Deployer.sendTransaction({ to: l2DeployerAddress, value: 0 });
+        await tx.wait();
+        break;
+      } catch(error) {
+        if (--numTries == 0) throw error;
+      }
+    }
   }
+}
+
+export function runDeployScript({
+  scriptPath,
+  throwOnFail = true,
+  tryNumber = 1,
+  maxTries = 3,
+}: {
+  scriptPath: string;
+  environment?: NodeJS.ProcessEnv;
+  throwOnFail?: boolean;
+  tryNumber?: number;
+  maxTries?: number;
+}) {
+  runCommand({
+    command: "ts-node",
+    args: ["--files", scriptPath],
+    workingDirectory: "./lido-l2-with-steth",
+    environment: process.env,
+    throwOnFail,
+    tryNumber,
+    maxTries,
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,6 +57,19 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   }
   const ethereumConfig = deploymentConfig["l1"];
   const optimismConfig = deploymentConfig["l2"];
+
+  dotenv.populate(
+    process.env as { [key: string]: string },
+    {
+      L1_BLOCK_EXPLORER_API_KEY: process.env.L1_EXPLORER_TOKEN ?? "",
+      L2_BLOCK_EXPLORER_API_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
+      L1_BLOCK_EXPLORER_BROWSER_URL: process.env.L1_BLOCK_EXPLORER_BROWSER_URL ?? "",
+      L2_BLOCK_EXPLORER_BROWSER_URL: process.env.L2_BLOCK_EXPLORER_BROWSER_URL ?? "",
+      L1_BLOCK_EXPLORER_API_URL: `https://${process.env.L1_BLOCK_EXPLORER_API_HOST ?? ""}/api`,
+      L2_BLOCK_EXPLORER_API_URL: `https://${process.env.L2_BLOCK_EXPLORER_API_HOST ?? ""}/api`,
+    },
+    { override: true },
+  );
 
   dotenv.populate(
     process.env as { [key: string]: string },
@@ -125,39 +154,15 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function setupL2RepoTests(testingParameters: any, govBridgeExecutor: string, newContractsCfg: any) {
-  dotenv.populate(process.env as { [key: string]: string }, {
-    TESTING_USE_DEPLOYED_CONTRACTS: "true",
-    TESTING_OPT_L1_LIDO: testingParameters["lido"],
-    TESTING_OPT_L1_REBASABLE_TOKEN: testingParameters["l1RebasableToken"],
-    TESTING_OPT_L1_NON_REBASABLE_TOKEN: testingParameters["l1NonRebasableToken"],
-    TESTING_OPT_L1_ACCOUNTING_ORACLE: testingParameters["accountingOracle"],
-    TESTING_L1_TOKENS_HOLDER: testingParameters["l1TokensHolder"],
-    TESTING_OPT_GOV_BRIDGE_EXECUTOR: govBridgeExecutor,
-    TESTING_OPT_L1_ERC20_TOKEN_BRIDGE: newContractsCfg["ethereum"]["bridgeProxyAddress"],
-    TESTING_OPT_L1_TOKEN_RATE_NOTIFIER: testingParameters["tokenRateNotifier"],
-    TESTING_OPT_L1_OP_STACK_TOKEN_RATE_PUSHER: newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"],
-    TESTING_OPT_L2_TOKEN_RATE_ORACLE: newContractsCfg["optimism"]["tokenRateOracleProxyAddress"],
-    TESTING_OPT_L2_NON_REBASABLE_TOKEN: newContractsCfg["optimism"]["tokenProxyAddress"],
-    TESTING_OPT_L2_REBASABLE_TOKEN: newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
-    TESTING_OPT_L2_ERC20_TOKEN_BRIDGE: newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
-  });
-}
-
-export function runIntegrationTest(test: string) {
-  const nodeCmd = "npx";
-  const nodeArgs = ["hardhat", "test", `./test/integration/${test}`];
-  child_process.spawnSync(nodeCmd, nodeArgs, {
-    cwd: "./lido-l2-with-steth",
-    stdio: "inherit",
-    env: process.env,
-  });
-}
-
-export function copyDeploymentArtifacts(originalDeployFileName: string, deployResultFileName: string) {
+function copyDeploymentArtifacts(originalDeployFileName: string, deployResultFileName: string) {
   const originalDeployFilePath = `./lido-l2-with-steth/${originalDeployFileName}`;
   cpSync(originalDeployFilePath, `./artifacts/${deployResultFileName}`);
+}
+
+export function copyArtifacts({deploymentResult, l1DeploymentArgs, l2DeploymentArgs} : {deploymentResult: string, l1DeploymentArgs: string, l2DeploymentArgs: string}) {
+  copyDeploymentArtifacts("deployResult.json", deploymentResult);
+  copyDeploymentArtifacts("l1DeployArgs.json", l1DeploymentArgs);
+  copyDeploymentArtifacts("l2DeployArgs.json", l2DeploymentArgs);
 }
 
 export function configFromArtifacts(fileName: string) {
@@ -166,68 +171,5 @@ export function configFromArtifacts(fileName: string) {
     return JSON.parse(data);
   } catch (error) {
     throw new Error(`can't parse deploy file ${fileName}: ${(error as Error).message}`);
-  }
-}
-
-export function runVerification(fileName: string, networkName: string) {
-  dotenv.populate(
-    process.env as { [key: string]: string },
-    {
-      L1_BLOCK_EXPLORER_API_KEY: process.env.L1_EXPLORER_TOKEN ?? "",
-      L2_BLOCK_EXPLORER_API_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
-      L1_BLOCK_EXPLORER_BROWSER_URL: process.env.L1_BLOCK_EXPLORER_BROWSER_URL ?? "",
-      L2_BLOCK_EXPLORER_BROWSER_URL: process.env.L2_BLOCK_EXPLORER_BROWSER_URL ?? "",
-      L1_BLOCK_EXPLORER_API_URL: `https://${process.env.L1_BLOCK_EXPLORER_API_URL ?? ""}/api`,
-      L2_BLOCK_EXPLORER_API_URL: `https://${process.env.L2_BLOCK_EXPLORER_API_URL ?? ""}/api`,
-    },
-    { override: true },
-  );
-
-  const args = configFromArtifacts(fileName);
-
-  let contract: keyof typeof args;
-  for (contract in args) {
-    const ctorArgs = args[contract];
-
-    const nodeCmd = "npx";
-    const nodeArgs = ["hardhat", "verify", "--network", networkName, contract, ...ctorArgs];
-    console.log("nodeArgs=", nodeArgs);
-
-    child_process.spawnSync(nodeCmd, nodeArgs, {
-      cwd: "./lido-l2-with-steth",
-      stdio: "inherit",
-      env: process.env,
-    });
-  }
-}
-
-export function runVerificationGovExecutor(fileName: string, networkName: string) {
-  dotenv.populate(
-    process.env as { [key: string]: string },
-    {
-      L2_PRC_URL: process.env.L2_REMOTE_RPC_URL ?? "",
-      L2_BLOCK_EXPLORER_API_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
-      L2_CHAIN_ID: process.env.L2_CHAIN_ID ?? "",
-      L2_BLOCK_EXPLORER_API_URL: process.env.L2_BLOCK_EXPLORER_API_URL ?? "",
-      L2_BLOCK_EXPLORER_BROWSER_URL: process.env.L2_BLOCK_EXPLORER_BROWSER_URL ?? "",
-    },
-    { override: true },
-  );
-
-  const args = configFromArtifacts(fileName);
-
-  let contract: keyof typeof args;
-  for (contract in args) {
-    console.log(`${contract}: ${args[contract]}`);
-
-    const nodeCmd = "npx";
-    const nodeArgs = ["hardhat", "verify", "--network", networkName, contract, ...args[contract]];
-    console.log("nodeArgs=", nodeArgs);
-
-    child_process.spawnSync(nodeCmd, nodeArgs, {
-      cwd: "./governance-crosschain-bridges",
-      stdio: "inherit",
-      env: process.env,
-    });
   }
 }

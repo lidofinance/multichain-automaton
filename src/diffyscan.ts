@@ -1,7 +1,6 @@
-import * as child_process from "node:child_process";
 import fs from "node:fs";
 import process from "node:process";
-
+import { runCommand } from "./command-utils";
 import dotenv from "dotenv";
 
 const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
@@ -13,11 +12,13 @@ export function setupDiffyscan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   deploymentConfig: any,
   remoteRpcUrl: string,
-  localRpcUrl: string
+  localRpcUrl: string,
+  chainID: string
 ) {
   dotenv.populate(
     process.env as { [key: string]: string },
     {
+      CHAIN_ID: chainID,
       ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN ?? "",
       OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN ?? "",
       L1_EXPLORER_API_HOSTNAME: process.env.L1_BLOCK_EXPLORER_API_HOST ?? "",
@@ -166,31 +167,36 @@ export function setupDiffyscan(
   );
 }
 
-export function runDiffyscan(configName: string, chainID: string, withBinaryComparison: boolean) {
-
-  dotenv.populate(
-    process.env as { [key: string]: string },
-    {
-      CHAIN_ID: chainID
-    },
-    { override: true },
-  );
-
-  const nodeCmd = "poetry";
+export function runDiffyscanScript({
+  config,
+  withBinaryComparison,
+  throwOnFail = true,
+  tryNumber = 1,
+  maxTries = 3,
+}: {
+  config: string;
+  withBinaryComparison: boolean,
+  throwOnFail?: boolean;
+  tryNumber?: number;
+  maxTries?: number;
+}) {
   const nodeArgs = [
     "run",
     "diffyscan",
-    `../artifacts/configs/${configName}`,
+    `../artifacts/configs/${config}`,
     "./hardhat_configs/automaton_hardhat_config.js",
     "--yes",
   ];
   if (withBinaryComparison) {
     nodeArgs.push("--enable-binary-comparison");
   }
-  console.log(`${nodeCmd} ${nodeArgs.join(" ")}`);
-  child_process.spawnSync(nodeCmd, nodeArgs, {
-    cwd: "./diffyscan",
-    stdio: "inherit",
-    env: process.env,
+  runCommand({
+    command: "poetry",
+    args: nodeArgs,
+    workingDirectory: "./diffyscan",
+    environment: process.env,
+    throwOnFail,
+    tryNumber,
+    maxTries,
   });
 }

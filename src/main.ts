@@ -10,24 +10,19 @@ import { ethers, JsonRpcProvider } from "ethers";
 import { once } from "stream";
 import * as YAML from "yaml";
 
-import { runDiffyscan, setupDiffyscan } from "./diffyscan";
-import { addGovExecutorToArtifacts, deployGovExecutor, saveArgs } from "./gov-executor";
+import { runDiffyscanScript, setupDiffyscan } from "./diffyscan";
+import { addGovExecutorToDeploymentArtifacts, deployGovExecutor, saveGovExecutorDeploymentArgs } from "./deploy-gov-executor";
 import {
   burnL2DeployerNonces,
   configFromArtifacts,
-  copyDeploymentArtifacts,
   populateDeployScriptEnvs,
   runDeployScript,
-  runIntegrationTest,
-  runVerification,
-  runVerificationGovExecutor,
-  setupL2RepoTests,
-} from "./lido-l2-with-steth";
-import { runStateMate, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
+  copyArtifacts
+} from "./deploy-all-contracts";
+import { runStateMateScript, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
+import { runVerificationScript, setupGovExecutorVerification } from "./verification";
+import { setupIntegrationTests, runIntegrationTestsScript } from "./integration-tests";
 import { NetworkType, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, diffyscanRpcUrl } from "./rpc-utils";
-
-export type ChildProcess = child_process.ChildProcessWithoutNullStreams;
-export type TestNode = { process: ChildProcess; rpcUrl: string };
 
 const NUM_L1_DEPLOYED_CONTRACTS = 3;
 
@@ -66,29 +61,30 @@ async function main() {
     const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), Number(process.env.L2_CHAIN_ID), localL2RpcPort(), "l2ForkOutput.txt");
 
     await burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS);
+   
+    const govBridgeExecutorAddressOnFork = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Forked));
+    saveGovExecutorDeploymentArgs(govBridgeExecutorAddressOnFork, deploymentConfig, "l2GovExecutorDeployArgsForked.json")
 
-    const govBridgeExecutorForked = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Forked));
-    saveArgs(govBridgeExecutorForked, deploymentConfig, "l2GovExecutorDeployArgsForked.json")
+    populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorAddressOnFork, NetworkType.Forked);
+    runDeployScript({scriptPath: "./scripts/optimism/deploy-automaton.ts"});
+    copyArtifacts({
+      deploymentResult: "deploymentResultForkedNetwork.json",
+      l1DeploymentArgs: "l1DeploymentArgsForked.json",
+      l2DeploymentArgs: "l2DeploymentArgsForked.json"
+    });
 
-    populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorForked, NetworkType.Forked);
-    runDeployScript({ throwOnFail: true });
-    copyDeploymentArtifacts("deployResult.json", "deployResultForkedNetwork.json");
-    copyDeploymentArtifacts("l1DeployArgs.json", "l1DeployArgsForked.json");
-    copyDeploymentArtifacts("l2DeployArgs.json", "l2DeployArgsForked.json");
-
-    let newContractsCfgForked = configFromArtifacts("deployResultForkedNetwork.json");
-    addGovExecutorToArtifacts(govBridgeExecutorForked, newContractsCfgForked, "deployResultForkedNetwork.json");
-    newContractsCfgForked = configFromArtifacts("deployResultForkedNetwork.json");
+    addGovExecutorToDeploymentArtifacts(govBridgeExecutorAddressOnFork, "deploymentResultForkedNetwork.json");
+    const deployedContractsOnForkedNetwork = configFromArtifacts("deploymentResultForkedNetwork.json");
 
     setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
-    setupStateMateConfig("automaton.yaml", newContractsCfgForked, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
-    runStateMate("automaton.yaml");
+    setupStateMateConfig("automaton.yaml", deployedContractsOnForkedNetwork, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
+    runStateMateScript({configName: "automaton.yaml"});
 
-    setupL2RepoTests(testingParameters, govBridgeExecutorForked, newContractsCfgForked);
-    runIntegrationTest("bridging-non-rebasable.integration.test.ts");
-    runIntegrationTest("bridging-rebasable.integration.test.ts");
-    runIntegrationTest("op-pusher-pushing-token-rate.integration.test.ts");
-    runIntegrationTest("optimism.integration.test.ts");
+    setupIntegrationTests(testingParameters, govBridgeExecutorAddressOnFork, deployedContractsOnForkedNetwork);
+    runIntegrationTestsScript({testName: "bridging-non-rebasable.integration.test.ts"});
+    runIntegrationTestsScript({testName: "bridging-rebasable.integration.test.ts"});
+    runIntegrationTestsScript({testName: "op-pusher-pushing-token-rate.integration.test.ts"});
+    runIntegrationTestsScript({testName: "optimism.integration.test.ts"});
 
     l1ForkNode.process.kill();
     l2ForkNode.process.kill();
@@ -103,44 +99,47 @@ async function main() {
     await burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
 
     const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Real));
-    saveArgs(govBridgeExecutor, deploymentConfig, "l2GovExecutorDeployArgs.json")
+    saveGovExecutorDeploymentArgs(govBridgeExecutor, deploymentConfig, "l2GovExecutorDeployArgs.json")
 
     populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Real);
-    runDeployScript({ throwOnFail: true });
-    copyDeploymentArtifacts("deployResult.json", "deployResultRealNetwork.json");
-    copyDeploymentArtifacts("l1DeployArgs.json", "l1DeployArgs.json");
-    copyDeploymentArtifacts("l2DeployArgs.json", "l2DeployArgs.json");
+    runDeployScript({scriptPath: "./scripts/optimism/deploy-automaton.ts"});
+    copyArtifacts({
+      deploymentResult: "deploymentResultRealNetwork.json",
+      l1DeploymentArgs: "l1DeploymentArgs.json",
+      l2DeploymentArgs: "l2DeploymentArgs.json"
+    });
+    addGovExecutorToDeploymentArtifacts(govBridgeExecutor, "deploymentResultRealNetwork.json");
 
-    await runVerification("l1DeployArgs.json", "l1");
-    await runVerification("l2DeployArgs.json", "l2");
-    await runVerificationGovExecutor("l2GovExecutorDeployArgs.json", "l2");
-    const newContractsCfgReal = configFromArtifacts("deployResultRealNetwork.json");
-    addGovExecutorToArtifacts(govBridgeExecutor, newContractsCfgReal, "deployResultRealNetwork.json");
+    runVerificationScript({config: "l1DeploymentArgs.json", network: "l1", workingDirectory: "./lido-l2-with-steth"});
+    runVerificationScript({config: "l2DeploymentArgs.json", network: "l2", workingDirectory: "./lido-l2-with-steth"});
+    setupGovExecutorVerification();
+    runVerificationScript({config: "l2GovExecutorDeployArgs.json", network: "l2", workingDirectory: "./governance-crosschain-bridges"});
   }
-  const newContractsCfgReal = configFromArtifacts("deployResultRealNetwork.json");
+
+  const deployedContractsOnRealNetwork = configFromArtifacts("deploymentResultRealNetwork.json");
 
   setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
-  setupStateMateConfig("automaton.yaml", newContractsCfgReal, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
-  runStateMate("automaton.yaml");
+  setupStateMateConfig("automaton.yaml", deployedContractsOnRealNetwork, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
+  runStateMateScript({configName: "automaton.yaml"})
 
   // diffyscan + bytecode on real
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl());
-  runDiffyscan("automaton_config_L1.json", process.env.L1_CHAIN_ID ?? "", true);
+  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl(), process.env.L1_CHAIN_ID ?? "");
+  runDiffyscanScript({ config:"automaton_config_L1.json",  withBinaryComparison: true });
 
-  setupDiffyscan(newContractsCfgReal, newContractsCfgReal["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl());
-  runDiffyscan("automaton_config_L2_gov.json", process.env.L2_CHAIN_ID ?? "", true);
-  runDiffyscan("automaton_config_L2.json", process.env.L2_CHAIN_ID ?? "", true);
+  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl(), process.env.L2_CHAIN_ID ?? "");
+  runDiffyscanScript({ config:"automaton_config_L2_gov.json", withBinaryComparison: true });
+  runDiffyscanScript({ config:"automaton_config_L2.json",  withBinaryComparison: true });
 
   // run forks
   // run l2 test on them
   const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), Number(process.env.L1_CHAIN_ID), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
   const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), Number(process.env.L2_CHAIN_ID), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
 
-  setupL2RepoTests(testingParameters, newContractsCfgReal["optimism"]["govBridgeExecutor"], newContractsCfgReal);
-  runIntegrationTest("bridging-non-rebasable.integration.test.ts");
-  runIntegrationTest("bridging-rebasable.integration.test.ts");
-  runIntegrationTest("op-pusher-pushing-token-rate.integration.test.ts");
-  runIntegrationTest("optimism.integration.test.ts");
+  setupIntegrationTests(testingParameters, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deployedContractsOnRealNetwork);
+  runIntegrationTestsScript({testName: "bridging-non-rebasable.integration.test.ts"});
+  runIntegrationTestsScript({testName: "bridging-rebasable.integration.test.ts"});
+  runIntegrationTestsScript({testName: "op-pusher-pushing-token-rate.integration.test.ts"});
+  runIntegrationTestsScript({testName: "optimism.integration.test.ts"});
 
   l1ForkNode.process.kill();
   l2ForkNode.process.kill();

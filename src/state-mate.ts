@@ -1,10 +1,10 @@
-import * as child_process from "node:child_process";
 import fs from "node:fs";
 import process from "node:process";
 
 import dotenv from "dotenv";
 import { ethers } from "ethers";
 import * as YAML from "yaml";
+import { runCommand } from "./command-utils";
 
 export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
   dotenv.populate(
@@ -156,27 +156,39 @@ export function setupStateMateConfig(
     checks.set("DOMAIN_SEPARATOR", wstETHDomainSeparator);
     checks.set("eip712Domain", ["0x0f",name,version,l2ChainId,address,"0x0000000000000000000000000000000000000000000000000000000000000000",[]]);
   }
+
+  function domainSeparator(name: string, version: string, l2ChainId: number, addr: string) {
+    const hashedName = ethers.keccak256(ethers.toUtf8Bytes(name));
+    const hashedVersion = ethers.keccak256(ethers.toUtf8Bytes(version));
+    const typeHash = ethers.keccak256(
+      ethers.toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+    );
+    const encodedParams = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
+      [typeHash, hashedName, hashedVersion, l2ChainId, addr],
+    );
+    return ethers.keccak256(encodedParams);
+  }  
 }
 
-export function runStateMate(configFile: string) {
-  const nodeCmd = "yarn";
-  const nodeArgs = ["start", `../artifacts/configs/${configFile}`];
-  child_process.spawnSync(nodeCmd, nodeArgs, {
-    cwd: "./state-mate",
-    stdio: "inherit",
-    env: process.env,
+export function runStateMateScript({
+  configName,
+  throwOnFail = true,
+  tryNumber = 1,
+  maxTries = 3,
+}: {
+  configName: string;
+  throwOnFail?: boolean;
+  tryNumber?: number;
+  maxTries?: number;
+}) {
+  runCommand({
+    command: "yarn",
+    args: ["start", `../artifacts/configs/${configName}`],
+    workingDirectory: "./state-mate",
+    environment: process.env,
+    throwOnFail,
+    tryNumber,
+    maxTries,
   });
-}
-
-function domainSeparator(name: string, version: string, l2ChainId: number, addr: string) {
-  const hashedName = ethers.keccak256(ethers.toUtf8Bytes(name));
-  const hashedVersion = ethers.keccak256(ethers.toUtf8Bytes(version));
-  const typeHash = ethers.keccak256(
-    ethers.toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-  );
-  const encodedParams = ethers.AbiCoder.defaultAbiCoder().encode(
-    ["bytes32", "bytes32", "bytes32", "uint256", "address"],
-    [typeHash, hashedName, hashedVersion, l2ChainId, addr],
-  );
-  return ethers.keccak256(encodedParams);
 }
