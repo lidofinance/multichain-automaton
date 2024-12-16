@@ -1,6 +1,8 @@
-import dotenv from "dotenv";
-import { runCommand } from "./command-utils";
 import { readFileSync } from "node:fs";
+
+import dotenv from "dotenv";
+
+import { runCommand } from "./command-utils";
 import env from "./env";
 
 export function runVerificationScript({

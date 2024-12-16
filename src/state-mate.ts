@@ -4,6 +4,7 @@ import process from "node:process";
 import dotenv from "dotenv";
 import { ethers } from "ethers";
 import * as YAML from "yaml";
+
 import { runCommand } from "./command-utils";
 
 export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
@@ -135,7 +136,7 @@ export function setupStateMateConfig(
   tokenRateOracleChecks.set("MIN_TIME_BETWEEN_TOKEN_RATE_UPDATES", Number(tokenRateOracleConfig["minTimeBetweenTokenRateUpdates"]));
   tokenRateOracleChecks.set("OLDEST_RATE_ALLOWED_IN_PAUSE_TIME_SPAN", Number(tokenRateOracleConfig["oldestRateAllowedInPauseTimeSpan"]));
   tokenRateOracleChecks.set("TOKEN_RATE_OUTDATED_DELAY", Number(tokenRateOracleConfig["tokenRateOutdatedDelay"]));
-  tokenRateOracleChecks.set("isTokenRateUpdatesPaused", !Boolean(tokenRateOracleConfig["updateEnabled"]));
+  tokenRateOracleChecks.set("isTokenRateUpdatesPaused", !tokenRateOracleConfig["updateEnabled"]);
 
   // L2TokenBridge
   const l2TokenBridge = l2Contracts.get("tokenBridge") as YAML.YAMLMap;
@@ -157,7 +158,7 @@ export function setupStateMateConfig(
     checks.set("eip712Domain", ["0x0f",name,version,l2ChainId,address,"0x0000000000000000000000000000000000000000000000000000000000000000",[]]);
   }
 
-  function domainSeparator(name: string, version: string, l2ChainId: number, addr: string) {
+  function domainSeparator(name: string, version: string, chainId: number, addr: string) {
     const hashedName = ethers.keccak256(ethers.toUtf8Bytes(name));
     const hashedVersion = ethers.keccak256(ethers.toUtf8Bytes(version));
     const typeHash = ethers.keccak256(
@@ -165,7 +166,7 @@ export function setupStateMateConfig(
     );
     const encodedParams = ethers.AbiCoder.defaultAbiCoder().encode(
       ["bytes32", "bytes32", "bytes32", "uint256", "address"],
-      [typeHash, hashedName, hashedVersion, l2ChainId, addr],
+      [typeHash, hashedName, hashedVersion, chainId, addr],
     );
     return ethers.keccak256(encodedParams);
   }  

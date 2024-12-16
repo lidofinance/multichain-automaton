@@ -1,5 +1,5 @@
-import { spawnSync } from "child_process";
 import chalk from "chalk";
+import { spawnSync } from "child_process";
 
 export function runCommand({
   command,

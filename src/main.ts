@@ -3,7 +3,6 @@ import * as child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import env from "./env";
 
 import "dotenv/config";
 import { program } from "commander";
@@ -11,19 +10,19 @@ import { JsonRpcProvider } from "ethers";
 import { once } from "stream";
 import * as YAML from "yaml";
 
-import { runDiffyscanScript, setupDiffyscan } from "./diffyscan";
-import { addGovExecutorToDeploymentArtifacts, deployGovExecutor, saveGovExecutorDeploymentArgs } from "./deploy-gov-executor";
 import {
   burnL2DeployerNonces,
   configFromArtifacts,
+  copyArtifacts,
   populateDeployScriptEnvs,
-  runDeployScript,
-  copyArtifacts
-} from "./deploy-all-contracts";
+  runDeployScript} from "./deploy-all-contracts";
+import { addGovExecutorToDeploymentArtifacts, deployGovExecutor, saveGovExecutorDeploymentArgs } from "./deploy-gov-executor";
+import { runDiffyscanScript, setupDiffyscan } from "./diffyscan";
+import env from "./env";
+import { runIntegrationTestsScript,setupIntegrationTests } from "./integration-tests";
+import { diffyscanRpcUrl,l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, NetworkType } from "./rpc-utils";
 import { runStateMateScript, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
 import { runVerificationScript, setupGovExecutorVerification } from "./verification";
-import { setupIntegrationTests, runIntegrationTestsScript } from "./integration-tests";
-import { NetworkType, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, diffyscanRpcUrl } from "./rpc-utils";
 
 const NUM_L1_DEPLOYED_CONTRACTS = 3;
 

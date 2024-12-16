@@ -1,10 +1,22 @@
-import { writeFileSync, readFileSync } from "node:fs";
+import { readFileSync,writeFileSync } from "node:fs";
+
 import chalk from "chalk";
 import { ethers } from "ethers";
+
 import env from "./env";
 
 const GOV_BRIDGE_EXECUTOR_PATH = "./governance-crosschain-bridges/artifacts/contracts/bridges/OptimismBridgeExecutor.sol/OptimismBridgeExecutor.json";
 const MAX_DEPLOYMENT_TRIES = 3;
+
+type ConstructorArgs = [
+  string, // ovmL2Messenger
+  string, // ethereumGovExecutor
+  number, // delay
+  number, // gracePeriod
+  number, // minDelay
+  number, // maxDelay
+  string  // ovmGuiardian
+];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
@@ -17,7 +29,8 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
   const { abi, bytecode } = contractJson;
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new ethers.Wallet(env.string("DEPLOYER_PRIVATE_KEY"), provider);
-  const contractFactory = new ethers.ContractFactory(abi, bytecode, wallet);
+
+  const contractFactory = new ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>(abi, bytecode, wallet);
 
   const govBridgeExecutorConfig = deploymentConfig["l2"]["govBridgeExecutor"];
   const contract = await deploy(contractFactory, govBridgeExecutorConfig, 1);
@@ -30,7 +43,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
   return deployedContractAddress;
 }
 
-async function deploy(contractFactory: ethers.ContractFactory<any[], ethers.BaseContract>, govBridgeExecutorConfig: Record<string, any>, tryIndex: number) {
+async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>, govBridgeExecutorConfig: Record<string, string | number>, tryIndex: number) {
   console.log(
     chalk.bold(
       chalk.yellowBright(
@@ -41,13 +54,13 @@ async function deploy(contractFactory: ethers.ContractFactory<any[], ethers.Base
 
   try {
       const contract = await contractFactory.deploy(
-        govBridgeExecutorConfig["ovmL2Messenger"],
-        govBridgeExecutorConfig["ethereumGovExecutor"],
-        govBridgeExecutorConfig["delay"],
-        govBridgeExecutorConfig["gracePeriod"],
-        govBridgeExecutorConfig["minDelay"],
-        govBridgeExecutorConfig["maxDelay"],
-        govBridgeExecutorConfig["ovmGuiardian"],
+        govBridgeExecutorConfig["ovmL2Messenger"] as string,
+        govBridgeExecutorConfig["ethereumGovExecutor"] as string,
+        govBridgeExecutorConfig["delay"] as number,
+        govBridgeExecutorConfig["gracePeriod"] as number,
+        govBridgeExecutorConfig["minDelay"] as number,
+        govBridgeExecutorConfig["maxDelay"] as number,
+        govBridgeExecutorConfig["ovmGuiardian"] as string,
       );
       await contract.deploymentTransaction();
       return contract;
@@ -79,9 +92,9 @@ export function saveGovExecutorDeploymentArgs(contractAddress: string, deploymen
   writeFileSync(`./artifacts/${fileName}`, JSON.stringify(content, null, 2));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function addGovExecutorToDeploymentArtifacts(govBridgeExecutor: string, deploymentResultsFilename: string) {
-  let newContractsConfig = configFromArtifacts(deploymentResultsFilename);
+  const newContractsConfig = configFromArtifacts(deploymentResultsFilename);
   newContractsConfig["optimism"]["govBridgeExecutor"] = govBridgeExecutor;
   writeFileSync(`./artifacts/${deploymentResultsFilename}`, JSON.stringify(newContractsConfig, null, 2));
 }

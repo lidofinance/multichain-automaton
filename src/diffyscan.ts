@@ -1,7 +1,9 @@
 import { readFileSync, writeFileSync} from "node:fs";
 import process from "node:process";
-import { runCommand } from "./command-utils";
+
 import dotenv from "dotenv";
+
+import { runCommand } from "./command-utils";
 import env from "./env";
 
 const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";

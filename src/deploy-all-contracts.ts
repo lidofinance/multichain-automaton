@@ -1,11 +1,13 @@
 import { cpSync, readFileSync } from "node:fs";
 import process from "node:process";
-import dotenv from "dotenv";
-import env from "./env";
-import { ethers } from 'ethers';
-import { NetworkType } from "./rpc-utils";
-import { runCommand } from "./command-utils";
+
 import chalk from "chalk";
+import dotenv from "dotenv";
+import { ethers } from 'ethers';
+
+import { runCommand } from "./command-utils";
+import env from "./env";
+import { NetworkType } from "./rpc-utils";
 
 export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) {
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
