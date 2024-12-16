@@ -4,6 +4,7 @@ import process from "node:process";
 import dotenv from "dotenv";
 
 import { runCommand } from "./command-utils";
+import { DeployParameters } from "./config";
 import env from "./env";
 
 const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
@@ -12,8 +13,8 @@ export function setupDiffyscan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
   govBridgeExecutor: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  deploymentConfig: any,
+   
+  deploymentConfig: DeployParameters,
   remoteRpcUrl: string,
   localRpcUrl: string,
   chainID: string
@@ -33,8 +34,8 @@ export function setupDiffyscan(
     { override: true },
   );
 
-  const ethereumConfig = deploymentConfig["l1"];
-  const optimismConfig = deploymentConfig["l2"];
+  const l1Config = deploymentConfig.l1;
+  const l2Config = deploymentConfig.l2;
 
   // ethereum
   const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/automaton_config_L1.json`;
@@ -47,24 +48,24 @@ export function setupDiffyscan(
   optimismTestnetConfigL1["bytecode_comparison"]["constructor_args"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: [
       newContractsCfg["ethereum"]["bridgeImplAddress"],
-      ethereumConfig["tokenBridge"]["bridgeAdmin"],
+      l1Config.tokenBridge.bridgeAdmin,
       "0x",
     ],
     [newContractsCfg["ethereum"]["bridgeImplAddress"]]: [
-      ethereumConfig["tokenBridge"]["messenger"],
+      l1Config.tokenBridge.messenger,
       newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
-      ethereumConfig["tokenBridge"]["l1NonRebasableToken"],
-      ethereumConfig["tokenBridge"]["l1RebasableToken"],
+      l1Config.tokenBridge.l1NonRebasableToken,
+      l1Config.tokenBridge.l1RebasableToken,
       newContractsCfg["optimism"]["tokenProxyAddress"],
       newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
-      ethereumConfig["tokenBridge"]["accountingOracle"],
+      l1Config.tokenBridge.accountingOracle,
     ],
     [newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"]]: [
-      ethereumConfig["opStackTokenRatePusher"]["messenger"],
-      ethereumConfig["opStackTokenRatePusher"]["wstETH"],
-      ethereumConfig["opStackTokenRatePusher"]["accountingOracle"],
+      l1Config.opStackTokenRatePusher.messenger,
+      l1Config.opStackTokenRatePusher.wstETH,
+      l1Config.opStackTokenRatePusher.accountingOracle,
       newContractsCfg["optimism"]["tokenRateOracleProxyAddress"],
-      Number(ethereumConfig["opStackTokenRatePusher"]["l2GasLimitForPushingTokenRate"]),
+      l1Config.opStackTokenRatePusher.l2GasLimitForPushingTokenRate,
     ],
   };
   writeFileSync(
@@ -80,13 +81,13 @@ export function setupDiffyscan(
   };
   optimismTestnetConfigL2Gov["bytecode_comparison"]["constructor_args"] = {
     [govBridgeExecutor]: [
-      optimismConfig["govBridgeExecutor"]["ovmL2Messenger"],
-      optimismConfig["govBridgeExecutor"]["ethereumGovExecutor"],
-      Number(optimismConfig["govBridgeExecutor"]["delay"]),
-      Number(optimismConfig["govBridgeExecutor"]["gracePeriod"]),
-      Number(optimismConfig["govBridgeExecutor"]["minDelay"]),
-      Number(optimismConfig["govBridgeExecutor"]["maxDelay"]),
-      optimismConfig["govBridgeExecutor"]["ovmGuiardian"],
+      l2Config.govBridgeExecutor.ovmL2Messenger,
+      l2Config.govBridgeExecutor.ethereumGovExecutor,
+      l2Config.govBridgeExecutor.delay,
+      l2Config.govBridgeExecutor.gracePeriod,
+      l2Config.govBridgeExecutor.minDelay,
+      l2Config.govBridgeExecutor.maxDelay,
+      l2Config.govBridgeExecutor.ovmGuiardian,
     ],
   };
   writeFileSync(
@@ -114,14 +115,14 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenRateOracleImplAddress"]]: [
-      optimismConfig["tokenRateOracle"]["l2Messenger"],
+      l2Config.tokenRateOracle.l2Messenger,
       newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
       newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"],
-      Number(optimismConfig["tokenRateOracle"]["tokenRateOutdatedDelay"]),
-      Number(optimismConfig["tokenRateOracle"]["maxAllowedL2ToL1ClockLag"]),
-      Number(optimismConfig["tokenRateOracle"]["maxAllowedTokenRateDeviationPerDayBp"]),
-      Number(optimismConfig["tokenRateOracle"]["oldestRateAllowedInPauseTimeSpan"]),
-      Number(optimismConfig["tokenRateOracle"]["minTimeBetweenTokenRateUpdates"]),
+      l2Config.tokenRateOracle.tokenRateOutdatedDelay,
+      l2Config.tokenRateOracle.maxAllowedL2ToL1ClockLag,
+      l2Config.tokenRateOracle.maxAllowedTokenRateDeviationPerDayBp,
+      l2Config.tokenRateOracle.oldestRateAllowedInPauseTimeSpan,
+      l2Config.tokenRateOracle.minTimeBetweenTokenRateUpdates,
     ],
     [newContractsCfg["optimism"]["tokenProxyAddress"]]: [
       newContractsCfg["optimism"]["tokenImplAddress"],
@@ -129,9 +130,9 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenImplAddress"]]: [
-      optimismConfig["nonRebasableToken"]["name"],
-      optimismConfig["nonRebasableToken"]["symbol"],
-      optimismConfig["nonRebasableToken"]["signingDomainVersion"],
+      l2Config.nonRebasableToken.name,
+      l2Config.nonRebasableToken.symbol,
+      l2Config.nonRebasableToken.signingDomainVersion,
       18,
       newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
     ],
@@ -141,9 +142,9 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenRebasableImplAddress"]]: [
-      optimismConfig["rebasableToken"]["name"],
-      optimismConfig["rebasableToken"]["symbol"],
-      optimismConfig["rebasableToken"]["signingDomainVersion"],
+      l2Config.rebasableToken.name,
+      l2Config.rebasableToken.symbol,
+      l2Config.rebasableToken.signingDomainVersion,
       18,
       newContractsCfg["optimism"]["tokenProxyAddress"],
       newContractsCfg["optimism"]["tokenRateOracleProxyAddress"],
@@ -155,10 +156,10 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenBridgeImplAddress"]]: [
-      optimismConfig["tokenBridge"]["messenger"],
+      l2Config.tokenBridge.messenger,
       newContractsCfg["ethereum"]["bridgeProxyAddress"],
-      optimismConfig["tokenBridge"]["l1NonRebasableToken"],
-      optimismConfig["tokenBridge"]["l1RebasableToken"],
+      l2Config.tokenBridge.l1NonRebasableToken,
+      l2Config.tokenBridge.l1RebasableToken,
       newContractsCfg["optimism"]["tokenProxyAddress"],
       newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
     ],

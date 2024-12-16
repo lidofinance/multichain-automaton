@@ -10,6 +10,7 @@ import { JsonRpcProvider } from "ethers";
 import { once } from "stream";
 import * as YAML from "yaml";
 
+import { MainConfig } from "./config";
 import {
   burnL2DeployerNonces,
   configFromArtifacts,
@@ -47,7 +48,7 @@ async function main() {
   const { configPath, onlyCheck, onlyForkDeploy } = parseCmdLineArgs();
   console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck}\n  - onlyForkDeploy: ${onlyForkDeploy}`);
 
-  const { mainConfig, mainConfigDoc } = loadYamlConfig(configPath);
+  const { mainConfig, mainConfigDoc }: {mainConfig: MainConfig, mainConfigDoc: YAML.Document} = loadYamlConfig(configPath);
   const deploymentConfig = mainConfig["deployParameters"];
   const testingParameters = mainConfig["testingParameters"];
 
@@ -152,7 +153,10 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-function loadYamlConfig(stateFile: string) {
+function loadYamlConfig(stateFile: string): {
+  mainConfig: MainConfig;
+  mainConfigDoc: YAML.Document;
+} {
   const file = path.resolve(stateFile);
   const configContent = fs.readFileSync(file, "utf-8");
   const reviver = (_: unknown, v: unknown) => {

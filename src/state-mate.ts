@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import * as YAML from "yaml";
 
 import { runCommand } from "./command-utils";
+import { MainConfig } from "./config";
 
 export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
   dotenv.populate(
@@ -24,9 +25,8 @@ export function setupStateMateConfig(
   configName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  mainConfig: any,
-  mainConfigDoc: any,
+  mainConfig: MainConfig,
+  mainConfigDoc: YAML.Document,
   l2ChainId: number,
 ) {
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {

@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { ethers } from 'ethers';
 
 import { runCommand } from "./command-utils";
+import { DeployParameters } from "./config";
 import env from "./env";
 import { NetworkType } from "./rpc-utils";
 
@@ -61,16 +62,17 @@ export function runDeployScript({
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecutor: string, networkType: NetworkType) {
+ 
+export function populateDeployScriptEnvs(deploymentConfig: DeployParameters, govBridgeExecutor: string, networkType: NetworkType) {
   function formattedArray(configArray: Array<string>) {
     return `[${configArray.map((ts: string) => `"${ts.toString()}"`)}]`;
   }
-  const ethereumConfig = deploymentConfig["l1"];
-  const optimismConfig = deploymentConfig["l2"];
+  const l1Config = deploymentConfig.l1;
+  const l2Config = deploymentConfig.l2;
 
   dotenv.populate(
     process.env as { [key: string]: string },
+
     {
       L1_BLOCK_EXPLORER_API_KEY: env.string("L1_EXPLORER_TOKEN"),
       L2_BLOCK_EXPLORER_API_KEY: env.string("L2_EXPLORER_TOKEN"),
@@ -91,63 +93,63 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
       L2_DEPLOYER_PRIVATE_KEY: env.string("DEPLOYER_PRIVATE_KEY"),
 
       // L1
-      L1_CROSSDOMAIN_MESSENGER: ethereumConfig["tokenBridge"]["messenger"],
-      L1_PROXY_ADMIN: ethereumConfig["proxyAdmin"],
+      L1_CROSSDOMAIN_MESSENGER: l1Config.tokenBridge.messenger,
+      L1_PROXY_ADMIN: l1Config.proxyAdmin,
 
-      L1_NON_REBASABLE_TOKEN: ethereumConfig["tokenBridge"]["l1NonRebasableToken"],
-      L1_REBASABLE_TOKEN: ethereumConfig["tokenBridge"]["l1RebasableToken"],
-      ACCOUNTING_ORACLE: ethereumConfig["tokenBridge"]["accountingOracle"],
-      L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE: ethereumConfig["opStackTokenRatePusher"]["l2GasLimitForPushingTokenRate"],
+      L1_NON_REBASABLE_TOKEN: l1Config.tokenBridge.l1NonRebasableToken,
+      L1_REBASABLE_TOKEN: l1Config.tokenBridge.l1RebasableToken,
+      ACCOUNTING_ORACLE: l1Config.tokenBridge.accountingOracle,
+      L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE: l1Config.opStackTokenRatePusher.l2GasLimitForPushingTokenRate.toString(),
 
-      L1_BRIDGE_ADMIN: ethereumConfig["tokenBridge"]["bridgeAdmin"],
-      L1_DEPOSITS_ENABLED: ethereumConfig["tokenBridge"]["depositsEnabled"],
-      L1_WITHDRAWALS_ENABLED: ethereumConfig["tokenBridge"]["withdrawalsEnabled"],
-      L1_DEPOSITS_ENABLERS: formattedArray(ethereumConfig["tokenBridge"]["depositsEnablers"]),
-      L1_DEPOSITS_DISABLERS: formattedArray(ethereumConfig["tokenBridge"]["depositsDisablers"]),
-      L1_WITHDRAWALS_ENABLERS: formattedArray(ethereumConfig["tokenBridge"]["withdrawalsEnablers"]),
-      L1_WITHDRAWALS_DISABLERS: formattedArray(ethereumConfig["tokenBridge"]["withdrawalsDisablers"]),
+      L1_BRIDGE_ADMIN: l1Config.tokenBridge.bridgeAdmin,
+      L1_DEPOSITS_ENABLED: l1Config.tokenBridge.depositsEnabled.toString(),
+      L1_WITHDRAWALS_ENABLED: l1Config.tokenBridge.withdrawalsEnabled.toString(),
+      L1_DEPOSITS_ENABLERS: formattedArray(l1Config.tokenBridge.depositsEnablers),
+      L1_DEPOSITS_DISABLERS: formattedArray(l1Config.tokenBridge.depositsDisablers),
+      L1_WITHDRAWALS_ENABLERS: formattedArray(l1Config.tokenBridge.withdrawalsEnablers),
+      L1_WITHDRAWALS_DISABLERS: formattedArray(l1Config.tokenBridge.withdrawalsDisablers),
 
       // L2
-      L2_CROSSDOMAIN_MESSENGER: optimismConfig["tokenBridge"]["messenger"],
+      L2_CROSSDOMAIN_MESSENGER: l2Config.tokenBridge.messenger,
       L2_PROXY_ADMIN: govBridgeExecutor,
 
       TOKEN_RATE_ORACLE_ADMIN: govBridgeExecutor,
-      TOKEN_RATE_UPDATE_ENABLED: optimismConfig["tokenRateOracle"]["updateEnabled"],
+      TOKEN_RATE_UPDATE_ENABLED: l2Config.tokenRateOracle.updateEnabled.toString(),
       TOKEN_RATE_UPDATE_ENABLERS: formattedArray([
-        ...optimismConfig["tokenRateOracle"]["updateEnablers"],
+        ...l2Config.tokenRateOracle.updateEnablers,
         govBridgeExecutor,
       ]),
       TOKEN_RATE_UPDATE_DISABLERS: formattedArray([
-        ...optimismConfig["tokenRateOracle"]["updateDisablers"],
+        ...l2Config.tokenRateOracle.updateDisablers,
         govBridgeExecutor,
       ]),
-      TOKEN_RATE_OUTDATED_DELAY: optimismConfig["tokenRateOracle"]["tokenRateOutdatedDelay"],
-      MAX_ALLOWED_L2_TO_L1_CLOCK_LAG: optimismConfig["tokenRateOracle"]["maxAllowedL2ToL1ClockLag"],
-      MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP: optimismConfig["tokenRateOracle"]["maxAllowedTokenRateDeviationPerDayBp"],
-      OLDEST_RATE_ALLOWED_IN_PAUSE_TIME_SPAN: optimismConfig["tokenRateOracle"]["oldestRateAllowedInPauseTimeSpan"],
-      MIN_TIME_BETWEEN_TOKEN_RATE_UPDATES: optimismConfig["tokenRateOracle"]["minTimeBetweenTokenRateUpdates"],
-      INITIAL_TOKEN_RATE_VALUE: optimismConfig["tokenRateOracle"]["initialTokenRateValue"],
-      INITIAL_TOKEN_RATE_L1_TIMESTAMP: optimismConfig["tokenRateOracle"]["initialTokenRateL1Timestamp"],
+      TOKEN_RATE_OUTDATED_DELAY: l2Config.tokenRateOracle.tokenRateOutdatedDelay.toString(),
+      MAX_ALLOWED_L2_TO_L1_CLOCK_LAG: l2Config.tokenRateOracle.maxAllowedL2ToL1ClockLag.toString(),
+      MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP: l2Config.tokenRateOracle.maxAllowedTokenRateDeviationPerDayBp.toString(),
+      OLDEST_RATE_ALLOWED_IN_PAUSE_TIME_SPAN: l2Config.tokenRateOracle.oldestRateAllowedInPauseTimeSpan.toString(),
+      MIN_TIME_BETWEEN_TOKEN_RATE_UPDATES: l2Config.tokenRateOracle.minTimeBetweenTokenRateUpdates.toString(),
+      INITIAL_TOKEN_RATE_VALUE: l2Config.tokenRateOracle.initialTokenRateValue.toString(),
+      INITIAL_TOKEN_RATE_L1_TIMESTAMP: l2Config.tokenRateOracle.initialTokenRateL1Timestamp.toString(),
 
-      L2_TOKEN_NON_REBASABLE_NAME: optimismConfig["nonRebasableToken"]["name"],
-      L2_TOKEN_NON_REBASABLE_SYMBOL: optimismConfig["nonRebasableToken"]["symbol"],
-      L2_TOKEN_NON_REBASABLE_SIGNING_DOMAIN_VERSION: optimismConfig["nonRebasableToken"]["signingDomainVersion"],
+      L2_TOKEN_NON_REBASABLE_NAME: l2Config.nonRebasableToken.name,
+      L2_TOKEN_NON_REBASABLE_SYMBOL: l2Config.nonRebasableToken.symbol,
+      L2_TOKEN_NON_REBASABLE_SIGNING_DOMAIN_VERSION: l2Config.nonRebasableToken.signingDomainVersion.toString(),
 
-      L2_TOKEN_REBASABLE_NAME: optimismConfig["rebasableToken"]["name"],
-      L2_TOKEN_REBASABLE_SYMBOL: optimismConfig["rebasableToken"]["symbol"],
-      L2_TOKEN_REBASABLE_SIGNING_DOMAIN_VERSION: optimismConfig["rebasableToken"]["signingDomainVersion"],
+      L2_TOKEN_REBASABLE_NAME: l2Config.rebasableToken.name,
+      L2_TOKEN_REBASABLE_SYMBOL: l2Config.rebasableToken.symbol,
+      L2_TOKEN_REBASABLE_SIGNING_DOMAIN_VERSION: l2Config.rebasableToken.signingDomainVersion.toString(),
 
       L2_BRIDGE_ADMIN: govBridgeExecutor,
-      L2_DEPOSITS_ENABLED: optimismConfig["tokenBridge"]["depositsEnabled"],
-      L2_WITHDRAWALS_ENABLED: optimismConfig["tokenBridge"]["withdrawalsEnabled"],
-      L2_DEPOSITS_ENABLERS: formattedArray([...optimismConfig["tokenBridge"]["depositsEnablers"], govBridgeExecutor]),
-      L2_DEPOSITS_DISABLERS: formattedArray([...optimismConfig["tokenBridge"]["depositsDisablers"], govBridgeExecutor]),
+      L2_DEPOSITS_ENABLED: l2Config.tokenBridge.depositsEnabled.toString(),
+      L2_WITHDRAWALS_ENABLED: l2Config.tokenBridge.withdrawalsEnabled.toString(),
+      L2_DEPOSITS_ENABLERS: formattedArray([...l2Config.tokenBridge.depositsEnablers, govBridgeExecutor]),
+      L2_DEPOSITS_DISABLERS: formattedArray([...l2Config.tokenBridge.depositsDisablers, govBridgeExecutor]),
       L2_WITHDRAWALS_ENABLERS: formattedArray([
-        ...optimismConfig["tokenBridge"]["withdrawalsEnablers"],
+        ...l2Config.tokenBridge.withdrawalsEnablers,
         govBridgeExecutor,
       ]),
       L2_WITHDRAWALS_DISABLERS: formattedArray([
-        ...optimismConfig["tokenBridge"]["withdrawalsDisablers"],
+        ...l2Config.tokenBridge.withdrawalsDisablers,
         govBridgeExecutor,
       ]),
 

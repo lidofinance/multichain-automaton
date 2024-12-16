@@ -3,6 +3,7 @@ import { readFileSync,writeFileSync } from "node:fs";
 import chalk from "chalk";
 import { ethers } from "ethers";
 
+import { DeployParameters, GovBridgeExecutor } from "./config";
 import env from "./env";
 
 const GOV_BRIDGE_EXECUTOR_PATH = "./governance-crosschain-bridges/artifacts/contracts/bridges/OptimismBridgeExecutor.sol/OptimismBridgeExecutor.json";
@@ -18,8 +19,8 @@ type ConstructorArgs = [
   string  // ovmGuiardian
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
+ 
+export async function deployGovExecutor(deploymentConfig: DeployParameters, rpcUrl: string) {
   const contractJson = JSON.parse(
     readFileSync(
       GOV_BRIDGE_EXECUTOR_PATH,
@@ -32,7 +33,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
 
   const contractFactory = new ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>(abi, bytecode, wallet);
 
-  const govBridgeExecutorConfig = deploymentConfig["l2"]["govBridgeExecutor"];
+  const govBridgeExecutorConfig = deploymentConfig.l2.govBridgeExecutor;
   const contract = await deploy(contractFactory, govBridgeExecutorConfig, 1);
   const deployedContractAddress = await contract.getAddress();
 
@@ -43,7 +44,7 @@ export async function deployGovExecutor(deploymentConfig: any, rpcUrl: string) {
   return deployedContractAddress;
 }
 
-async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>, govBridgeExecutorConfig: Record<string, string | number>, tryIndex: number) {
+async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>, govBridgeExecutorConfig: GovBridgeExecutor, tryIndex: number) {
   console.log(
     chalk.bold(
       chalk.yellowBright(
@@ -54,13 +55,13 @@ async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, e
 
   try {
       const contract = await contractFactory.deploy(
-        govBridgeExecutorConfig["ovmL2Messenger"] as string,
-        govBridgeExecutorConfig["ethereumGovExecutor"] as string,
-        govBridgeExecutorConfig["delay"] as number,
-        govBridgeExecutorConfig["gracePeriod"] as number,
-        govBridgeExecutorConfig["minDelay"] as number,
-        govBridgeExecutorConfig["maxDelay"] as number,
-        govBridgeExecutorConfig["ovmGuiardian"] as string,
+        govBridgeExecutorConfig.ovmL2Messenger,
+        govBridgeExecutorConfig.ethereumGovExecutor,
+        govBridgeExecutorConfig.delay,
+        govBridgeExecutorConfig.gracePeriod,
+        govBridgeExecutorConfig.minDelay,
+        govBridgeExecutorConfig.maxDelay,
+        govBridgeExecutorConfig.ovmGuiardian
       );
       await contract.deploymentTransaction();
       return contract;
@@ -73,19 +74,19 @@ async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, e
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function saveGovExecutorDeploymentArgs(contractAddress: string, deploymentConfig: any, fileName: string) {
-  const govBridgeExecutorConfig = deploymentConfig["l2"]["govBridgeExecutor"];
+ 
+export function saveGovExecutorDeploymentArgs(contractAddress: string, deploymentConfig: DeployParameters, fileName: string) {
+  const govBridgeExecutorConfig = deploymentConfig.l2.govBridgeExecutor;
 
   const content = {
     [contractAddress]: [
-      govBridgeExecutorConfig["ovmL2Messenger"],
-      govBridgeExecutorConfig["ethereumGovExecutor"],
-      govBridgeExecutorConfig["delay"],
-      govBridgeExecutorConfig["gracePeriod"],
-      govBridgeExecutorConfig["minDelay"],
-      govBridgeExecutorConfig["maxDelay"],
-      govBridgeExecutorConfig["ovmGuiardian"],
+      govBridgeExecutorConfig.ovmL2Messenger,
+      govBridgeExecutorConfig.ethereumGovExecutor,
+      govBridgeExecutorConfig.delay,
+      govBridgeExecutorConfig.gracePeriod,
+      govBridgeExecutorConfig.minDelay,
+      govBridgeExecutorConfig.maxDelay,
+      govBridgeExecutorConfig.ovmGuiardian
     ],
   };
   // save args
