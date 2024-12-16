@@ -1,9 +1,11 @@
 import { cpSync, readFileSync } from "node:fs";
 import process from "node:process";
 import dotenv from "dotenv";
+import env from "./env";
 import { ethers } from 'ethers';
 import { NetworkType } from "./rpc-utils";
 import { runCommand } from "./command-utils";
+import chalk from "chalk";
 
 export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) {
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
@@ -12,11 +14,18 @@ export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) 
   console.log(
     `Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`,
   );
-  for (let i = 0; i < numNonces; i++) {
-    let numTries = 3;
+  for (let nonceIndex = 0; nonceIndex < numNonces; nonceIndex++) {
+    const MAX_TRIES = 3;
+    let numTries = MAX_TRIES;
     while (true) {
       try {
-        console.log(`Burning ${i} tx, try num ${numTries}`);
+        console.log(
+          chalk.bold(
+            chalk.yellowBright(
+              `Burning ${nonceIndex} tx, try num ${MAX_TRIES - numTries + 1}`
+            )
+          )
+        );
         const tx = await l2Deployer.sendTransaction({ to: l2DeployerAddress, value: 0 });
         await tx.wait();
         break;
@@ -61,30 +70,23 @@ export function populateDeployScriptEnvs(deploymentConfig: any, govBridgeExecuto
   dotenv.populate(
     process.env as { [key: string]: string },
     {
-      L1_BLOCK_EXPLORER_API_KEY: process.env.L1_EXPLORER_TOKEN ?? "",
-      L2_BLOCK_EXPLORER_API_KEY: process.env.L2_EXPLORER_TOKEN ?? "",
-      L1_BLOCK_EXPLORER_BROWSER_URL: process.env.L1_BLOCK_EXPLORER_BROWSER_URL ?? "",
-      L2_BLOCK_EXPLORER_BROWSER_URL: process.env.L2_BLOCK_EXPLORER_BROWSER_URL ?? "",
-      L1_BLOCK_EXPLORER_API_URL: `https://${process.env.L1_BLOCK_EXPLORER_API_HOST ?? ""}/api`,
-      L2_BLOCK_EXPLORER_API_URL: `https://${process.env.L2_BLOCK_EXPLORER_API_HOST ?? ""}/api`,
-    },
-    { override: true },
-  );
+      L1_BLOCK_EXPLORER_API_KEY: env.string("L1_EXPLORER_TOKEN"),
+      L2_BLOCK_EXPLORER_API_KEY: env.string("L2_EXPLORER_TOKEN"),
+      L1_BLOCK_EXPLORER_BROWSER_URL: env.url("L1_BLOCK_EXPLORER_BROWSER_URL"),
+      L2_BLOCK_EXPLORER_BROWSER_URL: env.url("L2_BLOCK_EXPLORER_BROWSER_URL"),
+      L1_BLOCK_EXPLORER_API_URL: `https://${env.string("L1_BLOCK_EXPLORER_API_HOST")}/api`,
+      L2_BLOCK_EXPLORER_API_URL: `https://${env.string("L2_BLOCK_EXPLORER_API_HOST")}/api`,
 
-  dotenv.populate(
-    process.env as { [key: string]: string },
-    {
       FORKING: networkType == NetworkType.Forked ? "true" : "false",
 
-      L1_CHAIN_ID: process.env.L1_CHAIN_ID ?? "",
-      L2_CHAIN_ID: process.env.L2_CHAIN_ID ?? "",
+      L1_CHAIN_ID: env.string("L1_CHAIN_ID"),
+      L2_CHAIN_ID: env.string("L2_CHAIN_ID"),
 
-      L1_PRC_URL: process.env.L1_REMOTE_RPC_URL ?? "",
-      L2_PRC_URL: process.env.L2_REMOTE_RPC_URL ?? "",
+      L1_PRC_URL: env.url("L1_REMOTE_RPC_URL"),
+      L2_PRC_URL: env.url("L2_REMOTE_RPC_URL"),
 
-      L1_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
-      L2_DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY ?? "",
-
+      L1_DEPLOYER_PRIVATE_KEY: env.string("DEPLOYER_PRIVATE_KEY"),
+      L2_DEPLOYER_PRIVATE_KEY: env.string("DEPLOYER_PRIVATE_KEY"),
 
       // L1
       L1_CROSSDOMAIN_MESSENGER: ethereumConfig["tokenBridge"]["messenger"],

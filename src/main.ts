@@ -3,10 +3,11 @@ import * as child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import env from "./env";
 
 import "dotenv/config";
 import { program } from "commander";
-import { ethers, JsonRpcProvider } from "ethers";
+import { JsonRpcProvider } from "ethers";
 import { once } from "stream";
 import * as YAML from "yaml";
 
@@ -48,18 +49,15 @@ async function main() {
   console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck}\n  - onlyForkDeploy: ${onlyForkDeploy}`);
 
   const { mainConfig, mainConfigDoc } = loadYamlConfig(configPath);
-  
   const deploymentConfig = mainConfig["deployParameters"];
   const testingParameters = mainConfig["testingParameters"];
 
-  const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl(NetworkType.Real));
-  const { chainId } = await l2Provider.getNetwork();
-
-  // Deploy to the forked network
+  // FORK
   if (!onlyCheck) {    
-    const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), Number(process.env.L1_CHAIN_ID), localL1RpcPort(), "l1ForkOutput.txt");
-    const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), Number(process.env.L2_CHAIN_ID), localL2RpcPort(), "l2ForkOutput.txt");
+    const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkOutput.txt");
+    const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkOutput.txt");
 
+    // Deploy on forked network
     await burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS);
    
     const govBridgeExecutorAddressOnFork = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Forked));
@@ -76,10 +74,12 @@ async function main() {
     addGovExecutorToDeploymentArtifacts(govBridgeExecutorAddressOnFork, "deploymentResultForkedNetwork.json");
     const deployedContractsOnForkedNetwork = configFromArtifacts("deploymentResultForkedNetwork.json");
 
+    // State-mate
     setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
-    setupStateMateConfig("automaton.yaml", deployedContractsOnForkedNetwork, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
+    setupStateMateConfig("automaton.yaml", deployedContractsOnForkedNetwork, mainConfig, mainConfigDoc, env.number("L2_CHAIN_ID"));
     runStateMateScript({configName: "automaton.yaml"});
 
+    // Integration tests
     setupIntegrationTests(testingParameters, govBridgeExecutorAddressOnFork, deployedContractsOnForkedNetwork);
     runIntegrationTestsScript({testName: "bridging-non-rebasable.integration.test.ts"});
     runIntegrationTestsScript({testName: "bridging-rebasable.integration.test.ts"});
@@ -94,8 +94,10 @@ async function main() {
     return;
   }
 
-  // Deploy to the real network
+  // REAL
   if (!onlyCheck) {
+
+    // Deploy to the real network
     await burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
 
     const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Real));
@@ -110,6 +112,7 @@ async function main() {
     });
     addGovExecutorToDeploymentArtifacts(govBridgeExecutor, "deploymentResultRealNetwork.json");
 
+    // Verification
     runVerificationScript({config: "l1DeploymentArgs.json", network: "l1", workingDirectory: "./lido-l2-with-steth"});
     runVerificationScript({config: "l2DeploymentArgs.json", network: "l2", workingDirectory: "./lido-l2-with-steth"});
     setupGovExecutorVerification();
@@ -118,22 +121,22 @@ async function main() {
 
   const deployedContractsOnRealNetwork = configFromArtifacts("deploymentResultRealNetwork.json");
 
+  // State-mate
   setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
-  setupStateMateConfig("automaton.yaml", deployedContractsOnRealNetwork, mainConfig, mainConfigDoc, Number(process.env.L2_CHAIN_ID));
+  setupStateMateConfig("automaton.yaml", deployedContractsOnRealNetwork, mainConfig, mainConfigDoc, env.number("L2_CHAIN_ID"));
   runStateMateScript({configName: "automaton.yaml"})
 
-  // diffyscan + bytecode on real
-  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl(), process.env.L1_CHAIN_ID ?? "");
+  // Diffyscan
+  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L1_CHAIN_ID"));
   runDiffyscanScript({ config:"automaton_config_L1.json",  withBinaryComparison: true });
 
-  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl(), process.env.L2_CHAIN_ID ?? "");
+  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L2_CHAIN_ID"));
   runDiffyscanScript({ config:"automaton_config_L2_gov.json", withBinaryComparison: true });
   runDiffyscanScript({ config:"automaton_config_L2.json",  withBinaryComparison: true });
 
-  // run forks
-  // run l2 test on them
-  const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), Number(process.env.L1_CHAIN_ID), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
-  const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), Number(process.env.L2_CHAIN_ID), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
+  // Integration tests
+  const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
+  const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
 
   setupIntegrationTests(testingParameters, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deployedContractsOnRealNetwork);
   runIntegrationTestsScript({testName: "bridging-non-rebasable.integration.test.ts"});
