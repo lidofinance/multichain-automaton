@@ -14,8 +14,7 @@
     "format": "prettier . --write",
     "typecheck": "tsc src/*.ts --noEmit",
     "prepare": "husky",
-    "start": "ts-node src/main.ts",
-    "postinstall": "cd diffyscan && npm install && poetry install && cd ../lido-l2-with-steth && npm install && npm run compile && cd ../state-mate && yarn && cd ../governance-crosschain-bridges && npm install && npm run compile && cd .. && mkdir -p artifacts"
+    "start": "ts-node src/main.ts"
   },
   "lint-staged": {
     "./**/*.ts": [
@@ -30,7 +29,6 @@
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.4",
-    "postinstall": "^0.11.0",
     "yaml": "^2.6.1"
   },
   "devDependencies": {
