@@ -46,20 +46,39 @@ export DEPLOYER_PRIVATE_KEY=<your-deployer-private-key>
 
 #### RPC URLs
 
+Set up chain ID's and remote RPC URLs to run local testnet nodes that forks real network state.
+
 ```bash
+export L1_CHAIN_ID=<l1-chain-id>
+export L2_CHAIN_ID=<l2-chain-id>
 export L1_REMOTE_RPC_URL=<your-l1-remote-rpc-url>
 export L2_REMOTE_RPC_URL=<your-l2-remote-rpc-url>
-export L1_LOCAL_RPC_URL=<your-l1-local-rpc-url>
-export L2_LOCAL_RPC_URL=<your-l2-local-rpc-url>
+```
+
+Set up local port numbers for running forked nodes.
+
+```bash
+export L1_LOCAL_RPC_PORT=<your-l1-local-rpc-port>
+export L2_LOCAL_RPC_PORT=<your-l2-local-rpc-port>
+```
+
+Set up port number to run diffyscan fork.
+
+```bash
+export DIFFYSCAN_RPC_PORT=<rpc-port-for-diffyscan-fork>
 ```
 
 #### API Tokens
 
-Set your Etherscan tokens to fetch verified source code:
+Set your Etherscan tokens and URL's to fetch verified source code:
 
 ```bash
 export L1_EXPLORER_TOKEN=<your-etherscan-token>
 export L2_EXPLORER_TOKEN=<your-optimism-etherscan-token>
+export L1_BLOCK_EXPLORER_BROWSER_URL=<l1-block-explorer-browser-url>
+export L2_BLOCK_EXPLORER_BROWSER_URL=<l2-block-explorer-browser-url>
+export L1_BLOCK_EXPLORER_API_URL=<l1-block-explorer-api-url>
+export L2_BLOCK_EXPLORER_API_URL=<l2-block-explorer-api-url>
 ```
 
 Set your GitHub token to avoid strict rate limiting when querying the API:

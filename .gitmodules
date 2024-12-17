@@ -13,4 +13,4 @@
 [submodule "governance-crosschain-bridges"]
 	path = governance-crosschain-bridges
 	url = git@github.com:lidofinance/governance-crosschain-bridges.git
-    branch = deployment/unichain-sepolia
+    branch = automaton-config

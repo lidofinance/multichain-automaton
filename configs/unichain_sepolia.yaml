@@ -13,9 +13,8 @@ statemate:
   l1CrossDomainMessenger: *l1CrossDomainMessenger
 
 deployParameters:
-  network: sepolia
   forking: true
-  ethereum:
+  l1:
     proxyAdmin: *agent
     opStackTokenRatePusher:
       messenger: *l1CrossDomainMessenger
@@ -34,7 +33,7 @@ deployParameters:
       depositsDisablers: [*agent, *l1EmergencyBreaksMultisig]
       withdrawalsEnablers: [*agent]
       withdrawalsDisablers: [*agent, *l1EmergencyBreaksMultisig]
-  optimism:
+  l2:
     govBridgeExecutor:
       ovmL2Messenger: "0x4200000000000000000000000000000000000007"
       ethereumGovExecutor: *agent
@@ -58,7 +57,7 @@ deployParameters:
     nonRebasableToken:
       name: "Wrapped liquid staked Ether 2.0"
       symbol: "wstETH"
-      signingDomainVersion: 1
+      signingDomainVersion: 2
     rebasableToken:
       name: "Liquid staked Ether 2.0"
       symbol: "stETH"

@@ -1,42 +1,45 @@
-import * as child_process from "node:child_process";
-import fs from "node:fs";
+import { readFileSync, writeFileSync} from "node:fs";
 import process from "node:process";
 
 import dotenv from "dotenv";
 
-const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/unichain";
+import { runCommand } from "./command-utils";
+import { DeployParameters } from "./config";
+import env from "./env";
+
+const CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
 
 export function setupDiffyscan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
   govBridgeExecutor: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  deploymentConfig: any,
+   
+  deploymentConfig: DeployParameters,
   remoteRpcUrl: string,
+  localRpcUrl: string,
+  chainID: string
 ) {
   dotenv.populate(
     process.env as { [key: string]: string },
     {
-      // l2-steth
-      ETHERSCAN_API_KEY_ETH: process.env.L1_EXPLORER_TOKEN ?? "",
-      ETHERSCAN_API_KEY_OPT: process.env.L2_EXPLORER_TOKEN ?? "",
-      RPC_UNI_SEPOLIA: remoteRpcUrl,
-      // diffyscan
-      ETHERSCAN_EXPLORER_TOKEN: process.env.L1_EXPLORER_TOKEN ?? "",
-      OPTISCAN_EXPLORER_TOKEN: process.env.L2_EXPLORER_TOKEN ?? "",
+      CHAIN_ID: chainID,
+      ETHERSCAN_EXPLORER_TOKEN: env.string("L1_EXPLORER_TOKEN"),
+      OPTISCAN_EXPLORER_TOKEN: env.string("L2_EXPLORER_TOKEN"),
+      L1_EXPLORER_API_HOSTNAME: env.string("L1_BLOCK_EXPLORER_API_HOST"),
+      L2_EXPLORER_API_HOSTNAME: env.string("L2_BLOCK_EXPLORER_API_HOST"),
       REMOTE_RPC_URL: remoteRpcUrl,
-      LOCAL_RPC_URL: process.env.LOCAL_RPC_URL_DIFFYSCAN ?? "",
-      GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN ?? "",
+      LOCAL_RPC_URL: localRpcUrl,
+      GITHUB_API_TOKEN: env.string("GITHUB_API_TOKEN"),
     },
     { override: true },
   );
 
-  const ethereumConfig = deploymentConfig["ethereum"];
-  const optimismConfig = deploymentConfig["optimism"];
+  const l1Config = deploymentConfig.l1;
+  const l2Config = deploymentConfig.l2;
 
   // ethereum
-  const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L1.json`;
-  const optimismTestnetConfigL1 = JSON.parse(fs.readFileSync(fileNameL1, "utf8"));
+  const fileNameL1 = `${CONFIGS_PATH}/automaton_config_L1.json`;
+  const optimismTestnetConfigL1 = JSON.parse(readFileSync(fileNameL1, "utf8"));
   optimismTestnetConfigL1["contracts"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: "OssifiableProxy",
     [newContractsCfg["ethereum"]["bridgeImplAddress"]]: "L1LidoTokensBridge",
@@ -45,56 +48,56 @@ export function setupDiffyscan(
   optimismTestnetConfigL1["bytecode_comparison"]["constructor_args"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: [
       newContractsCfg["ethereum"]["bridgeImplAddress"],
-      ethereumConfig["tokenBridge"]["bridgeAdmin"],
+      l1Config.tokenBridge.bridgeAdmin,
       "0x",
     ],
     [newContractsCfg["ethereum"]["bridgeImplAddress"]]: [
-      ethereumConfig["tokenBridge"]["messenger"],
+      l1Config.tokenBridge.messenger,
       newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
-      ethereumConfig["tokenBridge"]["l1NonRebasableToken"],
-      ethereumConfig["tokenBridge"]["l1RebasableToken"],
+      l1Config.tokenBridge.l1NonRebasableToken,
+      l1Config.tokenBridge.l1RebasableToken,
       newContractsCfg["optimism"]["tokenProxyAddress"],
       newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
-      ethereumConfig["tokenBridge"]["accountingOracle"],
+      l1Config.tokenBridge.accountingOracle,
     ],
     [newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"]]: [
-      ethereumConfig["opStackTokenRatePusher"]["messenger"],
-      ethereumConfig["opStackTokenRatePusher"]["wstETH"],
-      ethereumConfig["opStackTokenRatePusher"]["accountingOracle"],
+      l1Config.opStackTokenRatePusher.messenger,
+      l1Config.opStackTokenRatePusher.wstETH,
+      l1Config.opStackTokenRatePusher.accountingOracle,
       newContractsCfg["optimism"]["tokenRateOracleProxyAddress"],
-      Number(ethereumConfig["opStackTokenRatePusher"]["l2GasLimitForPushingTokenRate"]),
+      l1Config.opStackTokenRatePusher.l2GasLimitForPushingTokenRate,
     ],
   };
-  fs.writeFileSync(
-    "./artifacts/configs/optimism_testnet_config_L1.json",
+  writeFileSync(
+    "./artifacts/configs/automaton_config_L1.json",
     JSON.stringify(optimismTestnetConfigL1, null, 2),
   );
 
   // gov executor
-  const fileNameL2Gov = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2_gov.json`;
-  const optimismTestnetConfigL2Gov = JSON.parse(fs.readFileSync(fileNameL2Gov, "utf8"));
+  const fileNameL2Gov = `${CONFIGS_PATH}/automaton_config_L2_gov.json`;
+  const optimismTestnetConfigL2Gov = JSON.parse(readFileSync(fileNameL2Gov, "utf8"));
   optimismTestnetConfigL2Gov["contracts"] = {
     [govBridgeExecutor]: "OptimismBridgeExecutor",
   };
   optimismTestnetConfigL2Gov["bytecode_comparison"]["constructor_args"] = {
     [govBridgeExecutor]: [
-      optimismConfig["govBridgeExecutor"]["ovmL2Messenger"],
-      optimismConfig["govBridgeExecutor"]["ethereumGovExecutor"],
-      Number(optimismConfig["govBridgeExecutor"]["delay"]),
-      Number(optimismConfig["govBridgeExecutor"]["gracePeriod"]),
-      Number(optimismConfig["govBridgeExecutor"]["minDelay"]),
-      Number(optimismConfig["govBridgeExecutor"]["maxDelay"]),
-      optimismConfig["govBridgeExecutor"]["ovmGuiardian"],
+      l2Config.govBridgeExecutor.ovmL2Messenger,
+      l2Config.govBridgeExecutor.ethereumGovExecutor,
+      l2Config.govBridgeExecutor.delay,
+      l2Config.govBridgeExecutor.gracePeriod,
+      l2Config.govBridgeExecutor.minDelay,
+      l2Config.govBridgeExecutor.maxDelay,
+      l2Config.govBridgeExecutor.ovmGuiardian,
     ],
   };
-  fs.writeFileSync(
-    "./artifacts/configs/optimism_testnet_config_L2_gov.json",
+  writeFileSync(
+    "./artifacts/configs/automaton_config_L2_gov.json",
     JSON.stringify(optimismTestnetConfigL2Gov, null, 2),
   );
 
   // optimism
-  const fileNameL2 = `${UNICHAIN_CONFIGS_PATH}/testnet/unichain_testnet_config_L2.json`;
-  const optimismTestnetConfigL2 = JSON.parse(fs.readFileSync(fileNameL2, "utf8"));
+  const fileNameL2 = `${CONFIGS_PATH}/automaton_config_L2.json`;
+  const optimismTestnetConfigL2 = JSON.parse(readFileSync(fileNameL2, "utf8"));
   optimismTestnetConfigL2["contracts"] = {
     [newContractsCfg["optimism"]["tokenRateOracleProxyAddress"]]: "OssifiableProxy",
     [newContractsCfg["optimism"]["tokenRateOracleImplAddress"]]: "TokenRateOracle",
@@ -112,14 +115,14 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenRateOracleImplAddress"]]: [
-      optimismConfig["tokenRateOracle"]["l2Messenger"],
+      l2Config.tokenRateOracle.l2Messenger,
       newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
       newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"],
-      Number(optimismConfig["tokenRateOracle"]["tokenRateOutdatedDelay"]),
-      Number(optimismConfig["tokenRateOracle"]["maxAllowedL2ToL1ClockLag"]),
-      Number(optimismConfig["tokenRateOracle"]["maxAllowedTokenRateDeviationPerDayBp"]),
-      Number(optimismConfig["tokenRateOracle"]["oldestRateAllowedInPauseTimeSpan"]),
-      Number(optimismConfig["tokenRateOracle"]["minTimeBetweenTokenRateUpdates"]),
+      l2Config.tokenRateOracle.tokenRateOutdatedDelay,
+      l2Config.tokenRateOracle.maxAllowedL2ToL1ClockLag,
+      l2Config.tokenRateOracle.maxAllowedTokenRateDeviationPerDayBp,
+      l2Config.tokenRateOracle.oldestRateAllowedInPauseTimeSpan,
+      l2Config.tokenRateOracle.minTimeBetweenTokenRateUpdates,
     ],
     [newContractsCfg["optimism"]["tokenProxyAddress"]]: [
       newContractsCfg["optimism"]["tokenImplAddress"],
@@ -127,9 +130,9 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenImplAddress"]]: [
-      optimismConfig["nonRebasableToken"]["name"],
-      optimismConfig["nonRebasableToken"]["symbol"],
-      optimismConfig["nonRebasableToken"]["signingDomainVersion"],
+      l2Config.nonRebasableToken.name,
+      l2Config.nonRebasableToken.symbol,
+      l2Config.nonRebasableToken.signingDomainVersion,
       18,
       newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
     ],
@@ -139,9 +142,9 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenRebasableImplAddress"]]: [
-      optimismConfig["rebasableToken"]["name"],
-      optimismConfig["rebasableToken"]["symbol"],
-      optimismConfig["rebasableToken"]["signingDomainVersion"],
+      l2Config.rebasableToken.name,
+      l2Config.rebasableToken.symbol,
+      l2Config.rebasableToken.signingDomainVersion,
       18,
       newContractsCfg["optimism"]["tokenProxyAddress"],
       newContractsCfg["optimism"]["tokenRateOracleProxyAddress"],
@@ -153,37 +156,51 @@ export function setupDiffyscan(
       "0x",
     ],
     [newContractsCfg["optimism"]["tokenBridgeImplAddress"]]: [
-      optimismConfig["tokenBridge"]["messenger"],
+      l2Config.tokenBridge.messenger,
       newContractsCfg["ethereum"]["bridgeProxyAddress"],
-      optimismConfig["tokenBridge"]["l1NonRebasableToken"],
-      optimismConfig["tokenBridge"]["l1RebasableToken"],
+      l2Config.tokenBridge.l1NonRebasableToken,
+      l2Config.tokenBridge.l1RebasableToken,
       newContractsCfg["optimism"]["tokenProxyAddress"],
       newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
     ],
   };
 
-  fs.writeFileSync(
-    "./artifacts/configs/optimism_testnet_config_L2.json",
+  writeFileSync(
+    "./artifacts/configs/automaton_config_L2.json",
     JSON.stringify(optimismTestnetConfigL2, null, 2),
   );
 }
 
-export function runDiffyscan(configName: string, withBinaryComparison: boolean) {
-  const nodeCmd = "poetry";
+export function runDiffyscanScript({
+  config,
+  withBinaryComparison,
+  throwOnFail = true,
+  tryNumber = 1,
+  maxTries = 3,
+}: {
+  config: string;
+  withBinaryComparison: boolean,
+  throwOnFail?: boolean;
+  tryNumber?: number;
+  maxTries?: number;
+}) {
   const nodeArgs = [
     "run",
     "diffyscan",
-    `../artifacts/configs/${configName}`,
-    "./hardhat_configs/sepolia_unichain_hardhat_config.js",
+    `../artifacts/configs/${config}`,
+    "./hardhat_configs/automaton_hardhat_config.js",
     "--yes",
   ];
   if (withBinaryComparison) {
     nodeArgs.push("--enable-binary-comparison");
   }
-  console.log(`${nodeCmd} ${nodeArgs.join(" ")}`);
-  child_process.spawnSync(nodeCmd, nodeArgs, {
-    cwd: "./diffyscan",
-    stdio: "inherit",
-    env: process.env,
+  runCommand({
+    command: "poetry",
+    args: nodeArgs,
+    workingDirectory: "./diffyscan",
+    environment: process.env,
+    throwOnFail,
+    tryNumber,
+    maxTries,
   });
 }

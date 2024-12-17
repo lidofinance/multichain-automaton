@@ -14,7 +14,7 @@
     "format": "prettier . --write",
     "typecheck": "tsc src/*.ts --noEmit",
     "prepare": "husky",
-    "start": "ts-node src/deploy.ts",
+    "start": "ts-node src/main.ts",
     "postinstall": "cd diffyscan && npm install && poetry install && cd ../lido-l2-with-steth && npm install && npm run compile && cd ../state-mate && yarn && cd ../governance-crosschain-bridges && npm install && npm run compile && cd .. && mkdir -p artifacts"
   },
   "lint-staged": {
