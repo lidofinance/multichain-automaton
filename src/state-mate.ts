@@ -83,13 +83,13 @@ export function setupStateMateConfig(
   // OpStackTokenRatePusher
   const opStackTokenRatePusher = l1Contracts.get("opStackTokenRatePusher") as YAML.YAMLMap;
   const opStackTokenRatePusherChecks = opStackTokenRatePusher.get("checks") as YAML.YAMLMap;
-  const opStackTokenRatePusherConfig = mainConfig["deployParameters"]["l1"]["opStackTokenRatePusher"];
+  const opStackTokenRatePusherConfig = mainConfig.deployParameters.l1.opStackTokenRatePusher;
   opStackTokenRatePusherChecks.set("L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE", Number(opStackTokenRatePusherConfig["l2GasLimitForPushingTokenRate"]));
 
   // L1TokenBridge
   const l1TokenBridge = l1Contracts.get("tokenBridge") as YAML.YAMLMap;
   const l1TokenBridgeChecks = l1TokenBridge.get("checks") as YAML.YAMLMap;
-  const l1TokenBridgeConfig = mainConfig["deployParameters"]["l1"]["tokenBridge"];
+  const l1TokenBridgeConfig = mainConfig.deployParameters.l1.tokenBridge;
   l1TokenBridgeChecks.set("isDepositsEnabled", l1TokenBridgeConfig["depositsEnabled"]);
   l1TokenBridgeChecks.set("isWithdrawalsEnabled", l1TokenBridgeConfig["withdrawalsEnabled"]);
 
@@ -101,7 +101,7 @@ export function setupStateMateConfig(
   // GovBridgeExecutor
   const governanceExecutor = l2Contracts.get("governanceExecutor") as YAML.YAMLMap;
   const governanceExecutorChecks = governanceExecutor.get("checks") as YAML.YAMLMap;
-  const govBridgeExecutorConfig = mainConfig["deployParameters"]["l2"]["govBridgeExecutor"];
+  const govBridgeExecutorConfig = mainConfig.deployParameters.l2.govBridgeExecutor;
   governanceExecutorChecks.set("OVM_L2_CROSS_DOMAIN_MESSENGER", govBridgeExecutorConfig["ovmL2Messenger"]);
   governanceExecutorChecks.set("getDelay", Number(govBridgeExecutorConfig["delay"]));
   governanceExecutorChecks.set("getGracePeriod", Number(govBridgeExecutorConfig["gracePeriod"]));
@@ -112,25 +112,25 @@ export function setupStateMateConfig(
   // L2WstETH
   const l2WstETH = l2Contracts.get("wstETH") as YAML.YAMLMap;
   const l2WstETHChecks = l2WstETH.get("checks") as YAML.YAMLMap;
-  const l2WstETHConfig = mainConfig["deployParameters"]["l2"]["nonRebasableToken"];
+  const l2WstETHConfig = mainConfig.deployParameters.l2.nonRebasableToken;
   l2WstETHChecks.set("name", l2WstETHConfig["name"]);
   l2WstETHChecks.set("symbol", l2WstETHConfig["symbol"]);
   l2WstETHChecks.set("getContractVersion", Number(l2WstETHConfig["signingDomainVersion"]));
-  setDomainSeparatorAndEIP712Domain("wstETH", newContractsCfg["optimism"]["tokenProxyAddress"], l2WstETHConfig["signingDomainVersion"]);
+  setDomainSeparatorAndEIP712Domain("wstETH", newContractsCfg["optimism"]["tokenProxyAddress"], l2WstETHConfig.signingDomainVersion);
 
   // L2StETH
   const l2StETH = l2Contracts.get("stETH") as YAML.YAMLMap;
   const l2StETHChecks = l2StETH.get("checks") as YAML.YAMLMap;
-  const l2StETHConfig = mainConfig["deployParameters"]["l2"]["rebasableToken"];
+  const l2StETHConfig = mainConfig.deployParameters.l2.rebasableToken;
   l2StETHChecks.set("name", l2StETHConfig["name"]);
   l2StETHChecks.set("symbol", l2StETHConfig["symbol"]);
   l2StETHChecks.set("getContractVersion", Number(l2StETHConfig["signingDomainVersion"]));
-  setDomainSeparatorAndEIP712Domain("stETH", newContractsCfg["optimism"]["tokenRebasableProxyAddress"], l2StETHConfig["signingDomainVersion"]);
+  setDomainSeparatorAndEIP712Domain("stETH", newContractsCfg["optimism"]["tokenRebasableProxyAddress"], l2StETHConfig.signingDomainVersion);
 
   // TokenRateOracle
   const tokenRateOracle = l2Contracts.get("tokenRateOracle") as YAML.YAMLMap;
   const tokenRateOracleChecks = tokenRateOracle.get("checks") as YAML.YAMLMap;
-  const tokenRateOracleConfig = mainConfig["deployParameters"]["l2"]["tokenRateOracle"];
+  const tokenRateOracleConfig = mainConfig.deployParameters.l2.tokenRateOracle;
   tokenRateOracleChecks.set("MAX_ALLOWED_L2_TO_L1_CLOCK_LAG", Number(tokenRateOracleConfig["maxAllowedL2ToL1ClockLag"]));
   tokenRateOracleChecks.set("MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP", Number(tokenRateOracleConfig["maxAllowedTokenRateDeviationPerDayBp"]));
   tokenRateOracleChecks.set("MIN_TIME_BETWEEN_TOKEN_RATE_UPDATES", Number(tokenRateOracleConfig["minTimeBetweenTokenRateUpdates"]));
@@ -141,7 +141,7 @@ export function setupStateMateConfig(
   // L2TokenBridge
   const l2TokenBridge = l2Contracts.get("tokenBridge") as YAML.YAMLMap;
   const l2TokenBridgeChecks = l2TokenBridge.get("checks") as YAML.YAMLMap;
-  const l2TokenBridgeConfig = mainConfig["deployParameters"]["l2"]["tokenBridge"];
+  const l2TokenBridgeConfig = mainConfig.deployParameters.l2.tokenBridge;
   l2TokenBridgeChecks.set("isDepositsEnabled", l2TokenBridgeConfig["depositsEnabled"]);
   l2TokenBridgeChecks.set("isWithdrawalsEnabled", l2TokenBridgeConfig["withdrawalsEnabled"]);
 
@@ -149,7 +149,7 @@ export function setupStateMateConfig(
   fs.writeFileSync(`./artifacts/configs/${configName}`, doc.toString());
   fs.cpSync("./state-mate/configs/optimism/abi", "./artifacts/configs/abi", { recursive: true });
 
-  function setDomainSeparatorAndEIP712Domain(token: string, address: string, version: string) {
+  function setDomainSeparatorAndEIP712Domain(token: string, address: string, version: number) {
     const stETH = l2Contracts.get(token) as YAML.YAMLMap;
     const checks = stETH.get("checks") as YAML.YAMLMap;
     const name = checks.get("name") as string;
@@ -158,9 +158,9 @@ export function setupStateMateConfig(
     checks.set("eip712Domain", ["0x0f",name,version,l2ChainId,address,"0x0000000000000000000000000000000000000000000000000000000000000000",[]]);
   }
 
-  function domainSeparator(name: string, version: string, chainId: number, addr: string) {
+  function domainSeparator(name: string, version: number, chainId: number, addr: string) {
     const hashedName = ethers.keccak256(ethers.toUtf8Bytes(name));
-    const hashedVersion = ethers.keccak256(ethers.toUtf8Bytes(version));
+    const hashedVersion = ethers.keccak256(ethers.toUtf8Bytes(version.toString()));
     const typeHash = ethers.keccak256(
       ethers.toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
     );

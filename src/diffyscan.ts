@@ -7,7 +7,7 @@ import { runCommand } from "./command-utils";
 import { DeployParameters } from "./config";
 import env from "./env";
 
-const UNICHAIN_CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
+const CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
 
 export function setupDiffyscan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,7 +38,7 @@ export function setupDiffyscan(
   const l2Config = deploymentConfig.l2;
 
   // ethereum
-  const fileNameL1 = `${UNICHAIN_CONFIGS_PATH}/automaton_config_L1.json`;
+  const fileNameL1 = `${CONFIGS_PATH}/automaton_config_L1.json`;
   const optimismTestnetConfigL1 = JSON.parse(readFileSync(fileNameL1, "utf8"));
   optimismTestnetConfigL1["contracts"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: "OssifiableProxy",
@@ -74,7 +74,7 @@ export function setupDiffyscan(
   );
 
   // gov executor
-  const fileNameL2Gov = `${UNICHAIN_CONFIGS_PATH}/automaton_config_L2_gov.json`;
+  const fileNameL2Gov = `${CONFIGS_PATH}/automaton_config_L2_gov.json`;
   const optimismTestnetConfigL2Gov = JSON.parse(readFileSync(fileNameL2Gov, "utf8"));
   optimismTestnetConfigL2Gov["contracts"] = {
     [govBridgeExecutor]: "OptimismBridgeExecutor",
@@ -96,7 +96,7 @@ export function setupDiffyscan(
   );
 
   // optimism
-  const fileNameL2 = `${UNICHAIN_CONFIGS_PATH}/automaton_config_L2.json`;
+  const fileNameL2 = `${CONFIGS_PATH}/automaton_config_L2.json`;
   const optimismTestnetConfigL2 = JSON.parse(readFileSync(fileNameL2, "utf8"));
   optimismTestnetConfigL2["contracts"] = {
     [newContractsCfg["optimism"]["tokenRateOracleProxyAddress"]]: "OssifiableProxy",
