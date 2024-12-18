@@ -5,23 +5,26 @@ import path from "node:path";
 import process from "node:process";
 
 import "dotenv/config";
+import chalk from "chalk";
+import cliProgress from "cli-progress";
 import { program } from "commander";
 import { JsonRpcProvider } from "ethers";
 import { once } from "stream";
 import * as YAML from "yaml";
 
-import { MainConfig } from "./config";
+import { DeployParameters, MainConfig, TestingParameters } from "./config";
 import {
   burnL2DeployerNonces,
   configFromArtifacts,
   copyArtifacts,
   populateDeployScriptEnvs,
-  runDeployScript} from "./deploy-all-contracts";
+  runDeployScript,
+} from "./deploy-all-contracts";
 import { addGovExecutorToDeploymentArtifacts, deployGovExecutor, saveGovExecutorDeploymentArgs } from "./deploy-gov-executor";
 import { runDiffyscanScript, setupDiffyscan } from "./diffyscan";
 import env from "./env";
-import { runIntegrationTestsScript,setupIntegrationTests } from "./integration-tests";
-import { diffyscanRpcUrl,l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, NetworkType } from "./rpc-utils";
+import { runIntegrationTestsScript, setupIntegrationTests } from "./integration-tests";
+import { diffyscanRpcUrl, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, NetworkType } from "./rpc-utils";
 import { runStateMateScript, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
 import { runVerificationScript, setupGovExecutorVerification } from "./verification";
 
@@ -42,110 +45,238 @@ function parseCmdLineArgs() {
   };
 }
 
+interface Context {
+  l1ForkNode?: { process: child_process.ChildProcess; rpcUrl: string };
+  l2ForkNode?: { process: child_process.ChildProcess; rpcUrl: string };
+  mainConfig: MainConfig;
+  mainConfigDoc: YAML.Document;
+  deploymentConfig: DeployParameters;
+  testingConfig: TestingParameters;
+  govBridgeExecutorAddressOnFork?: string;
+  govBridgeExecutor?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  deployedContracts?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  deployedContractsOnRealNetwork?: any;
+}
+
+interface Step {
+  name: string;
+  action: (context: Context) => Promise<void> | void;
+}
+
+const deployAndTestOnForksSteps: Step[] = [
+  {
+    name: "Spawn L1 Fork Node",
+    action: async (ctx) => {
+      ctx.l1ForkNode = await spawnNode(
+        l1RpcUrl(NetworkType.Real),
+        env.number("L1_CHAIN_ID"),
+        localL1RpcPort(),
+        "l1ForkOutput.txt"
+      );
+    }
+  },
+  {
+    name: "Spawn L2 Fork Node",
+    action: async (ctx) => {
+      ctx.l2ForkNode = await spawnNode(
+        l2RpcUrl(NetworkType.Real),
+        env.number("L2_CHAIN_ID"),
+        localL2RpcPort(),
+        "l2ForkOutput.txt"
+      );
+    }
+  },
+  {
+    name: "Burn L2 Deployer Nonces",
+    action: () => burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS)
+  },
+  {
+    name: "Deploy Governance Executor",
+    action: async (ctx) => {
+      ctx.govBridgeExecutorAddressOnFork = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Forked));
+      saveGovExecutorDeploymentArgs(ctx.govBridgeExecutorAddressOnFork, ctx.deploymentConfig, "l2GovExecutorDeployArgsForked.json");
+    }
+  },
+  {
+    name: "Run Deploy Script",
+    action: (ctx) => {
+      if (ctx.govBridgeExecutorAddressOnFork === undefined) {
+        throw Error("Gov executor wasn't deployed");
+      }
+      populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutorAddressOnFork, NetworkType.Forked);
+      runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts" });
+      copyArtifacts({
+        deploymentResult: "deploymentResultForkedNetwork.json",
+        l1DeploymentArgs: "l1DeploymentArgsForked.json",
+        l2DeploymentArgs: "l2DeploymentArgsForked.json"
+      });
+      addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutorAddressOnFork, "deploymentResultForkedNetwork.json");
+      ctx.deployedContracts = configFromArtifacts("deploymentResultForkedNetwork.json");
+    }
+  },
+  {
+    name: "State-Mate",
+    action: (ctx) => {
+      setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
+      setupStateMateConfig("automaton.yaml", ctx.deployedContracts, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
+      runStateMateScript({ configName: "automaton.yaml" });
+    }
+  },
+  {
+    name: "Run Integration Tests",
+    action: (ctx) => {
+      if (ctx.govBridgeExecutorAddressOnFork === undefined) {
+        throw Error("Gov executor wasn't deployed");
+      }
+      setupIntegrationTests(ctx.testingConfig, ctx.govBridgeExecutorAddressOnFork, ctx.deployedContracts);
+      runIntegrationTestsScript({ testName: "bridging-non-rebasable.integration.test.ts" });
+      runIntegrationTestsScript({ testName: "bridging-rebasable.integration.test.ts" });
+      runIntegrationTestsScript({ testName: "op-pusher-pushing-token-rate.integration.test.ts" });
+      runIntegrationTestsScript({ testName: "optimism.integration.test.ts" });
+    }
+  },
+  {
+    name: "Kill forks",
+    action: (ctx) => {
+      if (ctx.l1ForkNode !== undefined) {
+        ctx.l1ForkNode.process.kill();
+      }
+      if (ctx.l2ForkNode !== undefined) {
+        ctx.l2ForkNode.process.kill();
+      }
+    }
+  }
+];
+
+const deployAndVerifyOnRealNetworkSteps: Step[] = [
+  {
+    name: "Burn L2 Deployer Nonces",
+    action: () => burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS)
+  },
+  {
+    name: "Deploy Governance Executor",
+    action: async (ctx) => {
+      ctx.govBridgeExecutor = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Real));
+      saveGovExecutorDeploymentArgs(ctx.govBridgeExecutor, ctx.deploymentConfig, "l2GovExecutorDeployArgs.json");
+    }
+  },
+  {
+    name: "Run Deploy Script",
+    action: (ctx) => {
+      if (ctx.govBridgeExecutor === undefined) {
+        throw Error("Gov executor wasn't deployed");
+      }
+      populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutor, NetworkType.Real);
+      runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts" });
+      copyArtifacts({
+        deploymentResult: "deploymentResultRealNetwork.json",
+        l1DeploymentArgs: "l1DeploymentArgs.json",
+        l2DeploymentArgs: "l2DeploymentArgs.json"
+      });
+      addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutor, "deploymentResultRealNetwork.json");
+    }
+  },
+  {
+    name: "Verififcation",
+    action: () => {
+      runVerificationScript({ config: "l1DeploymentArgs.json", network: "l1", workingDirectory: "./lido-l2-with-steth" });
+      runVerificationScript({ config: "l2DeploymentArgs.json", network: "l2", workingDirectory: "./lido-l2-with-steth" });
+      setupGovExecutorVerification();
+      runVerificationScript({ config: "l2GovExecutorDeployArgs.json", network: "l2", workingDirectory: "./governance-crosschain-bridges" });
+    }
+  }
+];
+
+const testDeployedOnRealNetworkSteps: Step[] = [
+  {
+    name: "State-mate",
+    action: (ctx) => {
+      ctx.deployedContractsOnRealNetwork = configFromArtifacts("deploymentResultRealNetwork.json");
+
+      setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
+      setupStateMateConfig("automaton.yaml", ctx.deployedContractsOnRealNetwork, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
+      runStateMateScript({ configName: "automaton.yaml" });
+    }
+  },
+  {
+    name: "Diffyscan",
+    action: (ctx) => {
+      setupDiffyscan(ctx.deployedContractsOnRealNetwork, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], ctx.deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L1_CHAIN_ID"));
+      runDiffyscanScript({ config: "automaton_config_L1.json", withBinaryComparison: true });
+    
+      setupDiffyscan(ctx.deployedContractsOnRealNetwork, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], ctx.deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L2_CHAIN_ID"));
+      runDiffyscanScript({ config: "automaton_config_L2_gov.json", withBinaryComparison: true });
+      runDiffyscanScript({ config: "automaton_config_L2.json", withBinaryComparison: true });
+    }
+  },
+  {
+    name: "Integration tests",
+    action: async (ctx) => {
+      const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
+      const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
+    
+      populateDeployScriptEnvs(ctx.deploymentConfig, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], NetworkType.Real);
+      setupIntegrationTests(ctx.testingConfig, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], ctx.deployedContractsOnRealNetwork);
+      runIntegrationTestsScript({ testName: "bridging-non-rebasable.integration.test.ts" });
+      runIntegrationTestsScript({ testName: "bridging-rebasable.integration.test.ts" });
+      runIntegrationTestsScript({ testName: "op-pusher-pushing-token-rate.integration.test.ts" });
+      runIntegrationTestsScript({ testName: "optimism.integration.test.ts" });
+    
+      l1ForkNode.process.kill();
+      l2ForkNode.process.kill();
+    }
+  }
+];
+
+function getSteps(onlyForkDeploy: boolean, onlyCheck: boolean) {
+  if (onlyForkDeploy) {
+    return deployAndTestOnForksSteps;
+  }
+  if (onlyCheck) {
+    return testDeployedOnRealNetworkSteps;
+  }
+  return [...deployAndTestOnForksSteps, ...deployAndVerifyOnRealNetworkSteps, ...testDeployedOnRealNetworkSteps];
+}
+
 async function main() {
-  console.log("start");
+
+  const progressBar = new cliProgress.SingleBar({
+      format: chalk.greenBright("Progress [{bar}] {percentage}% | Step {value}/{total} | {stepName}"),
+      stopOnComplete: true,
+      clearOnComplete: false
+  }, cliProgress.Presets.shades_classic);
 
   const { configPath, onlyCheck, onlyForkDeploy } = parseCmdLineArgs();
-  console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck}\n  - onlyForkDeploy: ${onlyForkDeploy}`);
+  console.log(
+    chalk.yellowBright(
+      chalk.bold(
+        `Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck === true ? true : false }\n  - onlyForkDeploy: ${onlyForkDeploy === true ? true : false }\n`
+      )
+    )
+  );
 
-  const { mainConfig, mainConfigDoc }: {mainConfig: MainConfig, mainConfigDoc: YAML.Document} = loadYamlConfig(configPath);
-  const deploymentConfig = mainConfig["deployParameters"];
-  const testingParameters = mainConfig["testingParameters"];
+  const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig, mainConfigDoc: YAML.Document } = loadYamlConfig(configPath);
 
-  // FORK
-  if (!onlyCheck) {    
-    const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkOutput.txt");
-    const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkOutput.txt");
+  const context: Context = {
+    mainConfig: mainConfig,
+    mainConfigDoc: mainConfigDoc,
+    deploymentConfig: mainConfig["deployParameters"],
+    testingConfig: mainConfig["testingParameters"]
+  };
 
-    // Deploy on forked network
-    await burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS);
-   
-    const govBridgeExecutorAddressOnFork = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Forked));
-    saveGovExecutorDeploymentArgs(govBridgeExecutorAddressOnFork, deploymentConfig, "l2GovExecutorDeployArgsForked.json")
+  const steps = getSteps(onlyForkDeploy, onlyCheck);
 
-    populateDeployScriptEnvs(deploymentConfig, govBridgeExecutorAddressOnFork, NetworkType.Forked);
-    runDeployScript({scriptPath: "./scripts/optimism/deploy-automaton.ts"});
-    copyArtifacts({
-      deploymentResult: "deploymentResultForkedNetwork.json",
-      l1DeploymentArgs: "l1DeploymentArgsForked.json",
-      l2DeploymentArgs: "l2DeploymentArgsForked.json"
-    });
-
-    addGovExecutorToDeploymentArtifacts(govBridgeExecutorAddressOnFork, "deploymentResultForkedNetwork.json");
-    const deployedContractsOnForkedNetwork = configFromArtifacts("deploymentResultForkedNetwork.json");
-
-    // State-mate
-    setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
-    setupStateMateConfig("automaton.yaml", deployedContractsOnForkedNetwork, mainConfig, mainConfigDoc, env.number("L2_CHAIN_ID"));
-    runStateMateScript({configName: "automaton.yaml"});
-
-    // Integration tests
-    setupIntegrationTests(testingParameters, govBridgeExecutorAddressOnFork, deployedContractsOnForkedNetwork);
-    runIntegrationTestsScript({testName: "bridging-non-rebasable.integration.test.ts"});
-    runIntegrationTestsScript({testName: "bridging-rebasable.integration.test.ts"});
-    runIntegrationTestsScript({testName: "op-pusher-pushing-token-rate.integration.test.ts"});
-    runIntegrationTestsScript({testName: "optimism.integration.test.ts"});
-
-    l1ForkNode.process.kill();
-    l2ForkNode.process.kill();
-  }
-  
-  if (onlyForkDeploy) {
-    return;
+  for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+      const { name, action } = steps[stepIdx];
+      progressBar.start(steps.length, stepIdx, { stepName: name });
+      console.log("\n");
+      await action(context);
+      progressBar.stop();
   }
 
-  // REAL
-  if (!onlyCheck) {
-
-    // Deploy to the real network
-    await burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS);
-
-    const govBridgeExecutor = await deployGovExecutor(deploymentConfig, l2RpcUrl(NetworkType.Real));
-    saveGovExecutorDeploymentArgs(govBridgeExecutor, deploymentConfig, "l2GovExecutorDeployArgs.json")
-
-    populateDeployScriptEnvs(deploymentConfig, govBridgeExecutor, NetworkType.Real);
-    runDeployScript({scriptPath: "./scripts/optimism/deploy-automaton.ts"});
-    copyArtifacts({
-      deploymentResult: "deploymentResultRealNetwork.json",
-      l1DeploymentArgs: "l1DeploymentArgs.json",
-      l2DeploymentArgs: "l2DeploymentArgs.json"
-    });
-    addGovExecutorToDeploymentArtifacts(govBridgeExecutor, "deploymentResultRealNetwork.json");
-
-    // Verification
-    runVerificationScript({config: "l1DeploymentArgs.json", network: "l1", workingDirectory: "./lido-l2-with-steth"});
-    runVerificationScript({config: "l2DeploymentArgs.json", network: "l2", workingDirectory: "./lido-l2-with-steth"});
-    setupGovExecutorVerification();
-    runVerificationScript({config: "l2GovExecutorDeployArgs.json", network: "l2", workingDirectory: "./governance-crosschain-bridges"});
-  }
-
-  const deployedContractsOnRealNetwork = configFromArtifacts("deploymentResultRealNetwork.json");
-
-  // State-mate
-  setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
-  setupStateMateConfig("automaton.yaml", deployedContractsOnRealNetwork, mainConfig, mainConfigDoc, env.number("L2_CHAIN_ID"));
-  runStateMateScript({configName: "automaton.yaml"})
-
-  // Diffyscan
-  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L1_CHAIN_ID"));
-  runDiffyscanScript({ config:"automaton_config_L1.json",  withBinaryComparison: true });
-
-  setupDiffyscan(deployedContractsOnRealNetwork, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L2_CHAIN_ID"));
-  runDiffyscanScript({ config:"automaton_config_L2_gov.json", withBinaryComparison: true });
-  runDiffyscanScript({ config:"automaton_config_L2.json",  withBinaryComparison: true });
-
-  // Integration tests
-  const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
-  const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
-
-  setupIntegrationTests(testingParameters, deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], deployedContractsOnRealNetwork);
-  runIntegrationTestsScript({testName: "bridging-non-rebasable.integration.test.ts"});
-  runIntegrationTestsScript({testName: "bridging-rebasable.integration.test.ts"});
-  runIntegrationTestsScript({testName: "op-pusher-pushing-token-rate.integration.test.ts"});
-  runIntegrationTestsScript({testName: "optimism.integration.test.ts"});
-
-  l1ForkNode.process.kill();
-  l2ForkNode.process.kill();
+  progressBar.update(steps.length, { stepName: "All steps completed!" });
 }
 
 main().catch((error) => {
@@ -169,7 +300,7 @@ function loadYamlConfig(stateFile: string): {
   };
 }
 
-async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outputFileName: string) {
+async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outputFileName: string): Promise<{ process: child_process.ChildProcess; rpcUrl: string }> {
   const nodeCmd = "anvil";
   const nodeArgs = ["--fork-url", `${rpcForkUrl}`, "-p", `${port}`, "--no-storage-caching", "--chain-id", `${chainId}`];
 
@@ -178,8 +309,8 @@ async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outp
 
   const processInstance = child_process.spawn(nodeCmd, nodeArgs, { stdio: ["ignore", output, output] });
 
-  console.debug(`\nSpawning test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
-  console.debug(`Waiting 5 seconds ...`);
+  console.log(`Spawning test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
+  console.log(`Waiting 5 seconds ...`);
   await new Promise((r) => setTimeout(r, 5000));
 
   const localhost = `http://localhost:${port}`;
@@ -201,7 +332,7 @@ async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outp
     throw rpcError;
   }
 
-  console.debug(`\nSpawned test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
+  console.log(`Spawned test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
   return { process: processInstance, rpcUrl: rpcForkUrl };
 }
 
