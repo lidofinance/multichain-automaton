@@ -32,7 +32,7 @@ export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) 
         const tx = await l2Deployer.sendTransaction({ to: l2DeployerAddress, value: 0 });
         await tx.wait();
         break;
-      } catch(error) {
+      } catch (error) {
         if (--numTries == 0) throw error;
       }
     }
@@ -62,7 +62,6 @@ export function runDeployScript({
   });
 }
 
- 
 export function populateDeployScriptEnvs(deploymentConfig: DeployParameters, govBridgeExecutor: string, networkType: NetworkType) {
   function formattedArray(configArray: Array<string>) {
     return `[${configArray.map((ts: string) => `"${ts.toString()}"`)}]`;
@@ -72,7 +71,6 @@ export function populateDeployScriptEnvs(deploymentConfig: DeployParameters, gov
 
   dotenv.populate(
     process.env as { [key: string]: string },
-
     {
       L1_BLOCK_EXPLORER_API_KEY: env.string("L1_EXPLORER_TOKEN"),
       L2_BLOCK_EXPLORER_API_KEY: env.string("L2_EXPLORER_TOKEN"),
@@ -165,7 +163,7 @@ function copyDeploymentArtifacts(originalDeployFileName: string, deployResultFil
   cpSync(originalDeployFilePath, `./artifacts/${deployResultFileName}`);
 }
 
-export function copyArtifacts({deploymentResult, l1DeploymentArgs, l2DeploymentArgs} : {deploymentResult: string, l1DeploymentArgs: string, l2DeploymentArgs: string}) {
+export function copyArtifacts({ deploymentResult, l1DeploymentArgs, l2DeploymentArgs }: { deploymentResult: string, l1DeploymentArgs: string, l2DeploymentArgs: string }) {
   copyDeploymentArtifacts("deployResult.json", deploymentResult);
   copyDeploymentArtifacts("l1DeployArgs.json", l1DeploymentArgs);
   copyDeploymentArtifacts("l2DeployArgs.json", l2DeploymentArgs);

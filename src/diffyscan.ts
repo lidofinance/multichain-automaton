@@ -65,7 +65,7 @@ export function setupDiffyscan(
       l1Config.opStackTokenRatePusher.wstETH,
       l1Config.opStackTokenRatePusher.accountingOracle,
       newContractsCfg["optimism"]["tokenRateOracleProxyAddress"],
-      l1Config.opStackTokenRatePusher.l2GasLimitForPushingTokenRate,
+      Number(l1Config.opStackTokenRatePusher.l2GasLimitForPushingTokenRate),
     ],
   };
   writeFileSync(
@@ -83,10 +83,10 @@ export function setupDiffyscan(
     [govBridgeExecutor]: [
       l2Config.govBridgeExecutor.ovmL2Messenger,
       l2Config.govBridgeExecutor.ethereumGovExecutor,
-      l2Config.govBridgeExecutor.delay,
-      l2Config.govBridgeExecutor.gracePeriod,
-      l2Config.govBridgeExecutor.minDelay,
-      l2Config.govBridgeExecutor.maxDelay,
+      Number(l2Config.govBridgeExecutor.delay),
+      Number(l2Config.govBridgeExecutor.gracePeriod),
+      Number(l2Config.govBridgeExecutor.minDelay),
+      Number(l2Config.govBridgeExecutor.maxDelay),
       l2Config.govBridgeExecutor.ovmGuiardian,
     ],
   };
@@ -118,11 +118,11 @@ export function setupDiffyscan(
       l2Config.tokenRateOracle.l2Messenger,
       newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
       newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"],
-      l2Config.tokenRateOracle.tokenRateOutdatedDelay,
-      l2Config.tokenRateOracle.maxAllowedL2ToL1ClockLag,
-      l2Config.tokenRateOracle.maxAllowedTokenRateDeviationPerDayBp,
-      l2Config.tokenRateOracle.oldestRateAllowedInPauseTimeSpan,
-      l2Config.tokenRateOracle.minTimeBetweenTokenRateUpdates,
+      Number(l2Config.tokenRateOracle.tokenRateOutdatedDelay),
+      Number(l2Config.tokenRateOracle.maxAllowedL2ToL1ClockLag),
+      Number(l2Config.tokenRateOracle.maxAllowedTokenRateDeviationPerDayBp),
+      Number(l2Config.tokenRateOracle.oldestRateAllowedInPauseTimeSpan),
+      Number(l2Config.tokenRateOracle.minTimeBetweenTokenRateUpdates),
     ],
     [newContractsCfg["optimism"]["tokenProxyAddress"]]: [
       newContractsCfg["optimism"]["tokenImplAddress"],

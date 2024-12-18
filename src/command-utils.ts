@@ -21,7 +21,7 @@ export function runCommand({
   console.debug(
     chalk.bold(
       chalk.yellowBright(
-        `\nRun command in ${workingDirectory}: ${command} ${args.join(" ")} (try ${tryNumber} of ${maxTries})\n`
+        `Run command in ${workingDirectory}: ${command} ${args.join(" ")} (try ${tryNumber} of ${maxTries})\n`
       )
     )
   );
