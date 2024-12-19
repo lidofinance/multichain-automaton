@@ -97,6 +97,22 @@ yarn start ./path/to/config.yaml
 
 > **Note**: During execution, you will be prompted to confirm certain steps in the deployment process. The entire process typically takes around 15 minutes, depending on network conditions and RPC response times.
 
+### Docker
+
+To reate container:
+
+```bash
+docker build -t <build_name> .
+```
+
+Provide .env file and path to config to run it:
+
+```
+docker run --env-file .env --rm \
+  -v $(pwd)/path/to/config.yaml:/app/path/to/config.yaml \
+  <build_name> ./path/to/config.yaml
+```
+
 ## Contributing
 
 Contributions are appreciated! Please read the [Contributing Guidelines](CONTRIBUTING.md) to get started.
