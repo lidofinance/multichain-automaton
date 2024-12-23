@@ -34,57 +34,19 @@ This command installs all necessary dependencies for the automaton and its submo
 
 ## Usage
 
+### Prerequisites
+   - deployer must have ETH on both networks.
+   - config setup with EM brakes.
+
+### Config Setup
+Create config file using existing one for unichain (`./configs/unichain_sepolia.yaml`) as an example.
+
 ### Environment Setup
 
-Before running the script, set up your environment variables.
-
-#### Deployer Private Key
+Before running the script, set up your environment variables by copying `.env.example` and fill it with your data:
 
 ```bash
-export DEPLOYER_PRIVATE_KEY=<your-deployer-private-key>
-```
-
-#### RPC URLs
-
-Set up chain ID's and remote RPC URLs to run local testnet nodes that forks real network state.
-
-```bash
-export L1_CHAIN_ID=<l1-chain-id>
-export L2_CHAIN_ID=<l2-chain-id>
-export L1_REMOTE_RPC_URL=<your-l1-remote-rpc-url>
-export L2_REMOTE_RPC_URL=<your-l2-remote-rpc-url>
-```
-
-Set up local port numbers for running forked nodes.
-
-```bash
-export L1_LOCAL_RPC_PORT=<your-l1-local-rpc-port>
-export L2_LOCAL_RPC_PORT=<your-l2-local-rpc-port>
-```
-
-Set up port number to run diffyscan fork.
-
-```bash
-export DIFFYSCAN_RPC_PORT=<rpc-port-for-diffyscan-fork>
-```
-
-#### API Tokens
-
-Set your Etherscan tokens and URL's to fetch verified source code:
-
-```bash
-export L1_EXPLORER_TOKEN=<your-etherscan-token>
-export L2_EXPLORER_TOKEN=<your-optimism-etherscan-token>
-export L1_BLOCK_EXPLORER_BROWSER_URL=<l1-block-explorer-browser-url>
-export L2_BLOCK_EXPLORER_BROWSER_URL=<l2-block-explorer-browser-url>
-export L1_BLOCK_EXPLORER_API_URL=<l1-block-explorer-api-url>
-export L2_BLOCK_EXPLORER_API_URL=<l2-block-explorer-api-url>
-```
-
-Set your GitHub token to avoid strict rate limiting when querying the API:
-
-```bash
-export GITHUB_API_TOKEN=<your-github-token>
+cp .env.example .env
 ```
 
 ### Running the Script
@@ -99,10 +61,10 @@ yarn start ./path/to/config.yaml
 
 ### Docker
 
-To reate container:
+To сreate containe use this command with `linux/amd64` architecture:
 
 ```bash
-docker build -t <build_name> .
+docker buildx build --platform linux/amd64 -t <build_name> .
 ```
 
 Provide .env file and path to config to run it:
