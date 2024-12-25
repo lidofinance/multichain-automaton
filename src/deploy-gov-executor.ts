@@ -18,7 +18,6 @@ type ConstructorArgs = [
   number, // maxDelay
   string  // ovmGuiardian
 ];
-
  
 export async function deployGovExecutor(deploymentConfig: DeployParameters, rpcUrl: string, logCallback: LogCallback) {
   const contractJson = JSON.parse(
@@ -38,8 +37,8 @@ export async function deployGovExecutor(deploymentConfig: DeployParameters, rpcU
   const deployedContractAddress = await contract.getAddress();
 
   const pad = " ".repeat(4);
-  //console.log(`Deployer: ${chalk.underline(wallet.address)}`);
-  //console.log(`${pad}· GovBridgeExecutor: ${chalk.green(deployedContractAddress)}`);
+  logCallback(`Deployer: ${wallet.address}`, LogType.Level1);
+  logCallback(`${pad}· GovBridgeExecutor: ${deployedContractAddress}`, LogType.Level1);
 
   return deployedContractAddress;
 }
