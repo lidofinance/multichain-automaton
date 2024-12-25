@@ -7,6 +7,7 @@ import * as YAML from "yaml";
 
 import { runCommand } from "./command-utils";
 import { MainConfig } from "./config";
+import { LogCallback } from "./log-utils";
 
 export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
   dotenv.populate(
@@ -172,18 +173,20 @@ export function setupStateMateConfig(
   }  
 }
 
-export function runStateMateScript({
+export async function runStateMateScript({
   configName,
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
+  logCallback
 }: {
   configName: string;
   throwOnFail?: boolean;
   tryNumber?: number;
   maxTries?: number;
+  logCallback: LogCallback;
 }) {
-  runCommand({
+  await runCommand({
     command: "yarn",
     args: ["start", `../artifacts/configs/${configName}`],
     workingDirectory: "./state-mate",
@@ -191,5 +194,6 @@ export function runStateMateScript({
     throwOnFail,
     tryNumber,
     maxTries,
+    logCallback: logCallback
   });
 }

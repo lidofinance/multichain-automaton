@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { runCommand } from "./command-utils";
 import { DeployParameters } from "./config";
 import env from "./env";
+import { LogCallback } from "./log-utils";
 
 const CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
 
@@ -171,18 +172,20 @@ export function setupDiffyscan(
   );
 }
 
-export function runDiffyscanScript({
+export async function runDiffyscanScript({
   config,
   withBinaryComparison,
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
+  logCallback
 }: {
   config: string;
   withBinaryComparison: boolean,
   throwOnFail?: boolean;
   tryNumber?: number;
   maxTries?: number;
+  logCallback: LogCallback;
 }) {
   const nodeArgs = [
     "run",
@@ -194,7 +197,7 @@ export function runDiffyscanScript({
   if (withBinaryComparison) {
     nodeArgs.push("--enable-binary-comparison");
   }
-  runCommand({
+  await runCommand({
     command: "poetry",
     args: nodeArgs,
     workingDirectory: "./diffyscan",
@@ -202,5 +205,6 @@ export function runDiffyscanScript({
     throwOnFail,
     tryNumber,
     maxTries,
+    logCallback: logCallback,
   });
 }

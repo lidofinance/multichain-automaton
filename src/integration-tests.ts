@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 
 import { runCommand } from "./command-utils";
 import { TestingParameters } from "./config";
+import { LogCallback } from "./log-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setupIntegrationTests(testingParameters: TestingParameters, govBridgeExecutor: string, newContractsCfg: any) {
@@ -23,18 +24,20 @@ export function setupIntegrationTests(testingParameters: TestingParameters, govB
   });
 }
 
-export function runIntegrationTestsScript({
+export async function runIntegrationTestsScript({
   testName,
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
+  logCallback
 }: {
   testName: string;
   throwOnFail?: boolean;
   tryNumber?: number;
   maxTries?: number;
+  logCallback: LogCallback;
 }) {
-  runCommand({
+  await runCommand({
     command: "npx",
     args: ["hardhat", "test", `./test/integration/${testName}`],
     workingDirectory: "./lido-l2-with-steth",
@@ -42,5 +45,6 @@ export function runIntegrationTestsScript({
     throwOnFail,
     tryNumber,
     maxTries,
+    logCallback: logCallback
   });
 }

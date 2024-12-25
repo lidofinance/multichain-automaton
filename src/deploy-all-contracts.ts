@@ -9,26 +9,20 @@ import { runCommand } from "./command-utils";
 import { DeployParameters } from "./config";
 import env from "./env";
 import { NetworkType } from "./rpc-utils";
+import { LogCallback, LogType } from "./log-utils";
 
-export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) {
+export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number, logCallback: LogCallback) {
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
   const l2Deployer = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, l2Provider);
   const l2DeployerAddress = await l2Deployer.getAddress();
-  console.log(
-    `Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`,
-  );
+  logCallback(`Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`, LogType.Level1);
+  
   for (let nonceIndex = 0; nonceIndex < numNonces; nonceIndex++) {
     const MAX_TRIES = 3;
     let numTries = MAX_TRIES;
     while (true) {
       try {
-        console.log(
-          chalk.bold(
-            chalk.yellowBright(
-              `Burning ${nonceIndex} tx, try num ${MAX_TRIES - numTries + 1}`
-            )
-          )
-        );
+        logCallback(`Burning ${nonceIndex} tx, try num ${MAX_TRIES - numTries + 1}`, LogType.Level1);
         const tx = await l2Deployer.sendTransaction({ to: l2DeployerAddress, value: 0 });
         await tx.wait();
         break;
@@ -39,19 +33,21 @@ export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number) 
   }
 }
 
-export function runDeployScript({
+export async function runDeployScript({
   scriptPath,
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
+  logCallback
 }: {
   scriptPath: string;
   environment?: NodeJS.ProcessEnv;
   throwOnFail?: boolean;
   tryNumber?: number;
   maxTries?: number;
+  logCallback: LogCallback;
 }) {
-  runCommand({
+  await runCommand({
     command: "ts-node",
     args: ["--files", scriptPath],
     workingDirectory: "./lido-l2-with-steth",
@@ -59,6 +55,7 @@ export function runDeployScript({
     throwOnFail,
     tryNumber,
     maxTries,
+    logCallback: logCallback 
   });
 }
 

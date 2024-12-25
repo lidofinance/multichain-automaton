@@ -5,8 +5,6 @@ import path from "node:path";
 import process from "node:process";
 
 import "dotenv/config";
-import chalk from "chalk";
-import cliProgress from "cli-progress";
 import { program } from "commander";
 import { JsonRpcProvider } from "ethers";
 import { once } from "stream";
@@ -27,14 +25,17 @@ import { runIntegrationTestsScript, setupIntegrationTests } from "./integration-
 import { diffyscanRpcUrl, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, NetworkType } from "./rpc-utils";
 import { runStateMateScript, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
 import { runVerificationScript, setupGovExecutorVerification } from "./verification";
+import { LogCallback, logToStream, LogType } from "./log-utils";
+import { ProgressBar } from "./progress-bar";
 
-const NUM_L1_DEPLOYED_CONTRACTS = 3;
+const NUM_L1_DEPLOYED_CONTRACTS = 10;
 
 function parseCmdLineArgs() {
   program
     .argument("<config-path>", "path to .yaml config file")
     .option("--onlyCheck", "only check the real network deployment")
     .option("--onlyForkDeploy", "only deploy to the forked network")
+    .option("--showLogs", "show logs in console")
     .parse();
 
   const configPath = program.args[0];
@@ -42,6 +43,7 @@ function parseCmdLineArgs() {
     configPath,
     onlyCheck: program.getOptionValue("onlyCheck"),
     onlyForkDeploy: program.getOptionValue("onlyForkDeploy"),
+    showLogs: program.getOptionValue("showLogs"),
   };
 }
 
@@ -62,51 +64,53 @@ interface Context {
 
 interface Step {
   name: string;
-  action: (context: Context) => Promise<void> | void;
+  action: (context: Context, logCallback: LogCallback) => Promise<void> | void;
 }
 
 const deployAndTestOnForksSteps: Step[] = [
   {
     name: "Spawn L1 Fork Node",
-    action: async (ctx) => {
+    action: async (ctx, logCallback) => {
       ctx.l1ForkNode = await spawnNode(
         l1RpcUrl(NetworkType.Real),
         env.number("L1_CHAIN_ID"),
         localL1RpcPort(),
-        "l1ForkOutput.txt"
+        "l1ForkOutput.txt",
+        logCallback
       );
     }
   },
   {
     name: "Spawn L2 Fork Node",
-    action: async (ctx) => {
+    action: async (ctx, logCallback) => {
       ctx.l2ForkNode = await spawnNode(
         l2RpcUrl(NetworkType.Real),
         env.number("L2_CHAIN_ID"),
         localL2RpcPort(),
-        "l2ForkOutput.txt"
+        "l2ForkOutput.txt",
+        logCallback
       );
     }
   },
   {
     name: "Burn L2 Deployer Nonces",
-    action: () => burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS)
+    action: (_, logCallback) => burnL2DeployerNonces(l2RpcUrl(NetworkType.Forked), NUM_L1_DEPLOYED_CONTRACTS, logCallback)
   },
   {
     name: "Deploy Governance Executor",
-    action: async (ctx) => {
-      ctx.govBridgeExecutorAddressOnFork = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Forked));
+    action: async (ctx, logCallback) => {
+      ctx.govBridgeExecutorAddressOnFork = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Forked), logCallback);
       saveGovExecutorDeploymentArgs(ctx.govBridgeExecutorAddressOnFork, ctx.deploymentConfig, "l2GovExecutorDeployArgsForked.json");
     }
   },
   {
     name: "Run Deploy Script",
-    action: (ctx) => {
+    action: async (ctx, logCallback) => {
       if (ctx.govBridgeExecutorAddressOnFork === undefined) {
         throw Error("Gov executor wasn't deployed");
       }
       populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutorAddressOnFork, NetworkType.Forked);
-      runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts" });
+      await runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts", logCallback: logCallback });
       copyArtifacts({
         deploymentResult: "deploymentResultForkedNetwork.json",
         l1DeploymentArgs: "l1DeploymentArgsForked.json",
@@ -118,23 +122,23 @@ const deployAndTestOnForksSteps: Step[] = [
   },
   {
     name: "State-Mate",
-    action: (ctx) => {
+    action: async (ctx, logCallback) => {
       setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
       setupStateMateConfig("automaton.yaml", ctx.deployedContracts, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
-      runStateMateScript({ configName: "automaton.yaml" });
+      await runStateMateScript({ configName: "automaton.yaml", logCallback: logCallback });
     }
   },
   {
     name: "Run Integration Tests",
-    action: (ctx) => {
+    action: async (ctx, logCallback) => {
       if (ctx.govBridgeExecutorAddressOnFork === undefined) {
         throw Error("Gov executor wasn't deployed");
       }
       setupIntegrationTests(ctx.testingConfig, ctx.govBridgeExecutorAddressOnFork, ctx.deployedContracts);
-      runIntegrationTestsScript({ testName: "bridging-non-rebasable.integration.test.ts" });
-      runIntegrationTestsScript({ testName: "bridging-rebasable.integration.test.ts" });
-      runIntegrationTestsScript({ testName: "op-pusher-pushing-token-rate.integration.test.ts" });
-      runIntegrationTestsScript({ testName: "optimism.integration.test.ts" });
+      await runIntegrationTestsScript({ testName: "bridging-non-rebasable.integration.test.ts", logCallback: logCallback });
+      await runIntegrationTestsScript({ testName: "bridging-rebasable.integration.test.ts", logCallback: logCallback });
+      await runIntegrationTestsScript({ testName: "op-pusher-pushing-token-rate.integration.test.ts", logCallback: logCallback });
+      await runIntegrationTestsScript({ testName: "optimism.integration.test.ts", logCallback: logCallback });
     }
   },
   {
@@ -153,23 +157,23 @@ const deployAndTestOnForksSteps: Step[] = [
 const deployAndVerifyOnRealNetworkSteps: Step[] = [
   {
     name: "Burn L2 Deployer Nonces",
-    action: () => burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS)
+    action: (_, logCallback) => burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS, logCallback)
   },
   {
     name: "Deploy Governance Executor",
-    action: async (ctx) => {
-      ctx.govBridgeExecutor = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Real));
+    action: async (ctx, logCallback) => {
+      ctx.govBridgeExecutor = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Real), logCallback);
       saveGovExecutorDeploymentArgs(ctx.govBridgeExecutor, ctx.deploymentConfig, "l2GovExecutorDeployArgs.json");
     }
   },
   {
     name: "Run Deploy Script",
-    action: (ctx) => {
+    action: async (ctx, logCallback) => {
       if (ctx.govBridgeExecutor === undefined) {
         throw Error("Gov executor wasn't deployed");
       }
       populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutor, NetworkType.Real);
-      runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts" });
+      await runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts", logCallback: logCallback });
       copyArtifacts({
         deploymentResult: "deploymentResultRealNetwork.json",
         l1DeploymentArgs: "l1DeploymentArgs.json",
@@ -180,11 +184,11 @@ const deployAndVerifyOnRealNetworkSteps: Step[] = [
   },
   {
     name: "Verififcation",
-    action: () => {
-      runVerificationScript({ config: "l1DeploymentArgs.json", network: "l1", workingDirectory: "./lido-l2-with-steth" });
-      runVerificationScript({ config: "l2DeploymentArgs.json", network: "l2", workingDirectory: "./lido-l2-with-steth" });
+    action: async (_, logCallback) => {
+      await runVerificationScript({ config: "l1DeploymentArgs.json", network: "l1", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
+      await runVerificationScript({ config: "l2DeploymentArgs.json", network: "l2", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
       setupGovExecutorVerification();
-      runVerificationScript({ config: "l2GovExecutorDeployArgs.json", network: "l2", workingDirectory: "./governance-crosschain-bridges" });
+      await runVerificationScript({ config: "l2GovExecutorDeployArgs.json", network: "l2", workingDirectory: "./governance-crosschain-bridges", logCallback: logCallback });
     }
   }
 ];
@@ -192,37 +196,50 @@ const deployAndVerifyOnRealNetworkSteps: Step[] = [
 const testDeployedOnRealNetworkSteps: Step[] = [
   {
     name: "State-mate",
-    action: (ctx) => {
+    action: async (ctx, logCallback) => {
       ctx.deployedContractsOnRealNetwork = configFromArtifacts("deploymentResultRealNetwork.json");
-
       setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
       setupStateMateConfig("automaton.yaml", ctx.deployedContractsOnRealNetwork, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
-      runStateMateScript({ configName: "automaton.yaml" });
+      await runStateMateScript({ configName: "automaton.yaml", logCallback: logCallback });
     }
   },
   {
     name: "Diffyscan",
-    action: (ctx) => {
-      setupDiffyscan(ctx.deployedContractsOnRealNetwork, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], ctx.deploymentConfig, l1RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L1_CHAIN_ID"));
-      runDiffyscanScript({ config: "automaton_config_L1.json", withBinaryComparison: true });
+    action: async (ctx, logCallback) => {
+      setupDiffyscan(
+        ctx.deployedContractsOnRealNetwork,
+        ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
+        ctx.deploymentConfig,
+        l1RpcUrl(NetworkType.Real),
+        diffyscanRpcUrl(),
+        env.string("L1_CHAIN_ID")
+      );
+      await runDiffyscanScript({ config: "automaton_config_L1.json", withBinaryComparison: true, logCallback: logCallback });
     
-      setupDiffyscan(ctx.deployedContractsOnRealNetwork, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], ctx.deploymentConfig, l2RpcUrl(NetworkType.Real), diffyscanRpcUrl(), env.string("L2_CHAIN_ID"));
-      runDiffyscanScript({ config: "automaton_config_L2_gov.json", withBinaryComparison: true });
-      runDiffyscanScript({ config: "automaton_config_L2.json", withBinaryComparison: true });
+      setupDiffyscan(
+        ctx.deployedContractsOnRealNetwork,
+        ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
+        ctx.deploymentConfig,
+        l2RpcUrl(NetworkType.Real),
+        diffyscanRpcUrl(),
+        env.string("L2_CHAIN_ID")
+      );
+      await runDiffyscanScript({ config: "automaton_config_L2_gov.json", withBinaryComparison: true, logCallback: logCallback });
+      await runDiffyscanScript({ config: "automaton_config_L2.json", withBinaryComparison: true, logCallback: logCallback });
     }
   },
   {
     name: "Integration tests",
-    action: async (ctx) => {
-      const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkAfterDeployOutput.txt");
-      const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkAfterDeployOutput.txt");
+    action: async (ctx, logCallback) => {
+      const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkAfterDeployOutput.txt", logCallback);
+      const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkAfterDeployOutput.txt", logCallback);
     
       populateDeployScriptEnvs(ctx.deploymentConfig, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], NetworkType.Real);
       setupIntegrationTests(ctx.testingConfig, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], ctx.deployedContractsOnRealNetwork);
-      runIntegrationTestsScript({ testName: "bridging-non-rebasable.integration.test.ts" });
-      runIntegrationTestsScript({ testName: "bridging-rebasable.integration.test.ts" });
-      runIntegrationTestsScript({ testName: "op-pusher-pushing-token-rate.integration.test.ts" });
-      runIntegrationTestsScript({ testName: "optimism.integration.test.ts" });
+      await runIntegrationTestsScript({ testName: "bridging-non-rebasable.integration.test.ts", logCallback: logCallback });
+      await runIntegrationTestsScript({ testName: "bridging-rebasable.integration.test.ts", logCallback: logCallback });
+      await runIntegrationTestsScript({ testName: "op-pusher-pushing-token-rate.integration.test.ts", logCallback: logCallback });
+      await runIntegrationTestsScript({ testName: "optimism.integration.test.ts", logCallback: logCallback });
     
       l1ForkNode.process.kill();
       l2ForkNode.process.kill();
@@ -241,21 +258,10 @@ function getSteps(onlyForkDeploy: boolean, onlyCheck: boolean) {
 }
 
 async function main() {
+  const logStream = fs.createWriteStream("./artifacts/main_logs.txt");
 
-  const progressBar = new cliProgress.SingleBar({
-      format: chalk.greenBright("Progress [{bar}] {percentage}% | Step {value}/{total} | {stepName}"),
-      stopOnComplete: true,
-      clearOnComplete: false
-  }, cliProgress.Presets.shades_classic);
-
-  const { configPath, onlyCheck, onlyForkDeploy } = parseCmdLineArgs();
-  console.log(
-    chalk.yellowBright(
-      chalk.bold(
-        `Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck === true ? true : false }\n  - onlyForkDeploy: ${onlyForkDeploy === true ? true : false }\n`
-      )
-    )
-  );
+  const { configPath, onlyCheck, onlyForkDeploy, showLogs } = parseCmdLineArgs();
+  console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck === true ? true : false }\n  - onlyForkDeploy: ${onlyForkDeploy === true ? true : false }\n  - showLogs: ${showLogs === true ? true : false }\n`);
 
   const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig, mainConfigDoc: YAML.Document } = loadYamlConfig(configPath);
 
@@ -266,17 +272,28 @@ async function main() {
     testingConfig: mainConfig["testingParameters"]
   };
 
+  const progress = new ProgressBar(showLogs);
   const steps = getSteps(onlyForkDeploy, onlyCheck);
+
+  progress.start(steps.length);
 
   for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
       const { name, action } = steps[stepIdx];
-      progressBar.start(steps.length, stepIdx, { stepName: name });
-      console.log("\n");
-      await action(context);
-      progressBar.stop();
+      progress.update(stepIdx, name);
+      logStream.write(`[${new Date().toISOString()}] ${name}`);
+      await action(context, (message, logType) => {
+        if (showLogs) {
+          logToStream(process.stdout, message, logType);
+        } else {
+          if (logType === LogType.Level1) {
+            progress.update(stepIdx, message);
+          }
+        }
+        logToStream(logStream, message, logType);
+      });
   }
-
-  progressBar.update(steps.length, { stepName: "All steps completed!" });
+  progress.complete();
+  logStream.end();
 }
 
 main().catch((error) => {
@@ -300,7 +317,13 @@ function loadYamlConfig(stateFile: string): {
   };
 }
 
-async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outputFileName: string): Promise<{ process: child_process.ChildProcess; rpcUrl: string }> {
+async function spawnNode(
+  rpcForkUrl: string,
+  chainId: number,
+  port: number,
+  outputFileName: string,
+  logCallback: LogCallback
+): Promise<{ process: child_process.ChildProcess; rpcUrl: string }> {
   const nodeCmd = "anvil";
   const nodeArgs = ["--fork-url", `${rpcForkUrl}`, "-p", `${port}`, "--no-storage-caching", "--chain-id", `${chainId}`];
 
@@ -309,8 +332,7 @@ async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outp
 
   const processInstance = child_process.spawn(nodeCmd, nodeArgs, { stdio: ["ignore", output, output] });
 
-  console.log(`Spawning test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
-  console.log(`Waiting 5 seconds ...`);
+  logCallback(`Spawning test node: ${nodeCmd} ${nodeArgs.join(" ")}. Waiting 5 seconds ...`, LogType.Level1);
   await new Promise((r) => setTimeout(r, 5000));
 
   const localhost = `http://localhost:${port}`;
@@ -331,8 +353,8 @@ async function spawnNode(rpcForkUrl: string, chainId: number, port: number, outp
   if (rpcError !== undefined) {
     throw rpcError;
   }
-
-  console.log(`Spawned test node: ${nodeCmd} ${nodeArgs.join(" ")}`);
+  
+  logCallback(`Spawned test node: ${nodeCmd} ${nodeArgs.join(" ")}`, LogType.Level1);
   return { process: processInstance, rpcUrl: rpcForkUrl };
 }
 

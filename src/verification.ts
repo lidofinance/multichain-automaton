@@ -4,14 +4,16 @@ import dotenv from "dotenv";
 
 import { runCommand } from "./command-utils";
 import env from "./env";
+import { LogCallback } from "./log-utils";
 
-export function runVerificationScript({
+export async function runVerificationScript({
   config,
   network,
   workingDirectory,
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
+  logCallback
 }: {
   config: string;
   network: string;
@@ -19,12 +21,13 @@ export function runVerificationScript({
   throwOnFail?: boolean;
   tryNumber?: number;
   maxTries?: number;
+  logCallback: LogCallback;
 }) {
   const args = configFromArtifacts(config);
   let contract: keyof typeof args;
   for (contract in args) {
     const ctorArgs = args[contract];
-    runCommand({
+    await runCommand({
       command: "npx",
       args: ["hardhat", "verify", "--network", network, contract, ...ctorArgs],
       workingDirectory,
@@ -32,6 +35,7 @@ export function runVerificationScript({
       throwOnFail,
       tryNumber,
       maxTries,
+      logCallback: logCallback
     });
   }
 }

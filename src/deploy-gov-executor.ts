@@ -1,10 +1,10 @@
 import { readFileSync,writeFileSync } from "node:fs";
 
-import chalk from "chalk";
 import { ethers } from "ethers";
 
 import { DeployParameters, GovBridgeExecutor } from "./config";
 import env from "./env";
+import { LogCallback, LogType } from "./log-utils";
 
 const GOV_BRIDGE_EXECUTOR_PATH = "./governance-crosschain-bridges/artifacts/contracts/bridges/OptimismBridgeExecutor.sol/OptimismBridgeExecutor.json";
 const MAX_DEPLOYMENT_TRIES = 3;
@@ -20,7 +20,7 @@ type ConstructorArgs = [
 ];
 
  
-export async function deployGovExecutor(deploymentConfig: DeployParameters, rpcUrl: string) {
+export async function deployGovExecutor(deploymentConfig: DeployParameters, rpcUrl: string, logCallback: LogCallback) {
   const contractJson = JSON.parse(
     readFileSync(
       GOV_BRIDGE_EXECUTOR_PATH,
@@ -34,25 +34,20 @@ export async function deployGovExecutor(deploymentConfig: DeployParameters, rpcU
   const contractFactory = new ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>(abi, bytecode, wallet);
 
   const govBridgeExecutorConfig = deploymentConfig.l2.govBridgeExecutor;
-  const contract = await deploy(contractFactory, govBridgeExecutorConfig, 1);
+  const contract = await deploy(contractFactory, govBridgeExecutorConfig, 1, logCallback);
   const deployedContractAddress = await contract.getAddress();
 
   const pad = " ".repeat(4);
-  console.log(`Deployer: ${chalk.underline(wallet.address)}`);
-  console.log(`${pad}· GovBridgeExecutor: ${chalk.green(deployedContractAddress)}`);
+  //console.log(`Deployer: ${chalk.underline(wallet.address)}`);
+  //console.log(`${pad}· GovBridgeExecutor: ${chalk.green(deployedContractAddress)}`);
 
   return deployedContractAddress;
 }
 
-async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>, govBridgeExecutorConfig: GovBridgeExecutor, tryIndex: number) {
-  console.log(
-    chalk.bold(
-      chalk.yellowBright(
-        `Deploying GovBridgeExecutor try: ${tryIndex}\n`
-      )
-    )
-  );
-
+async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, ethers.BaseContract>, govBridgeExecutorConfig: GovBridgeExecutor, tryIndex: number, logCallback: LogCallback) {
+ 
+  logCallback(`Deploying GovBridgeExecutor try: ${tryIndex}`, LogType.Level1);
+ 
   try {
       const contract = await contractFactory.deploy(
         govBridgeExecutorConfig.ovmL2Messenger,
@@ -67,7 +62,7 @@ async function deploy(contractFactory: ethers.ContractFactory<ConstructorArgs, e
       return contract;
     } catch (error) {
       if (tryIndex < MAX_DEPLOYMENT_TRIES) {
-        return await deploy(contractFactory, govBridgeExecutorConfig, tryIndex + 1);
+        return await deploy(contractFactory, govBridgeExecutorConfig, tryIndex + 1, logCallback);
       } else {
         throw error;
       }
