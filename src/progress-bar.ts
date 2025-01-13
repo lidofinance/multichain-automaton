@@ -3,12 +3,13 @@ import cliProgress from "cli-progress";
 export class ProgressBar {
     private bar: cliProgress.SingleBar | null = null;
   
-    constructor(private showLogs: boolean) {
+    constructor(showLogs: boolean) {
       if (!showLogs) {
         this.bar = new cliProgress.SingleBar({
           format: "Progress [{bar}] {percentage}% | Step {value}/{total} | {stepName}",
           stopOnComplete: true,
-          clearOnComplete: false
+          clearOnComplete: false,
+          stream: process.stdout
         }, cliProgress.Presets.shades_classic);
       }
     }
