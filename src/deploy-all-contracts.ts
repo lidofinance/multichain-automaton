@@ -10,25 +10,57 @@ import env from "./env";
 import { LogCallback, LogType } from "./log-utils";
 import { NetworkType } from "./rpc-utils";
 
+const WAIT_TX_TIMEOUT = 30_000;
+
 export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number, logCallback: LogCallback) {
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
   const l2Deployer = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, l2Provider);
   const l2DeployerAddress = await l2Deployer.getAddress();
+  const feeData = await l2Provider.getFeeData();
+  const maxFeePerGas = feeData.maxFeePerGas ?? ethers.parseUnits("1500000", "wei");
+  const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ?? ethers.parseUnits("1000000", "wei");
+
   logCallback(`Burning ${numNonces} nonces from L2 deployer ${l2DeployerAddress} to prevent L1 and L2 addresses collision...`, LogType.Level1);
-  
+
   for (let nonceIndex = 0; nonceIndex < numNonces; nonceIndex++) {
     const MAX_TRIES = 3;
     let numTries = MAX_TRIES;
     while (true) {
       try {
-        logCallback(`Burning ${nonceIndex} tx, try num ${MAX_TRIES - numTries + 1}`, LogType.Level1);
-        const tx = await l2Deployer.sendTransaction({ to: l2DeployerAddress, value: 0 });
-        await tx.wait();
+        const tryNum = MAX_TRIES - numTries + 1;
+        logCallback(`Burning ${nonceIndex} tx, try num: ${tryNum} maxFeePerGas: ${maxFeePerGas} maxPriorityFeePerGas:${maxPriorityFeePerGas}`, LogType.Level1);
+        const tx = await waitWithTimeout(
+          l2Deployer.sendTransaction({ 
+            to: l2DeployerAddress, 
+            value: 0,
+            maxPriorityFeePerGas: maxPriorityFeePerGas * retryGasFactor(tryNum),
+            maxFeePerGas: (maxFeePerGas + maxPriorityFeePerGas) * retryGasFactor(tryNum)
+          }), 
+          WAIT_TX_TIMEOUT
+        );
+        await waitWithTimeout(tx.wait(), WAIT_TX_TIMEOUT);
         break;
       } catch (error) {
         if (--numTries == 0) throw error;
       }
     }
+  }
+
+  function retryGasFactor(tryNum: number): bigint {
+    return BigInt(Math.pow(2, tryNum - 1));
+  }
+  
+  async function waitWithTimeout<T>(
+    promise: Promise<T>, 
+    timeout: number, 
+    errorMessage: string = 'Operation timeout'
+  ): Promise<T> {
+    return Promise.race<T>([
+      promise,
+      new Promise<T>((_, reject) => 
+        setTimeout(() => reject(new Error(errorMessage)), timeout)
+      )
+    ]);
   }
 }
 

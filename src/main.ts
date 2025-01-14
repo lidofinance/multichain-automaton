@@ -32,7 +32,11 @@ async function main() {
   const logStream = fs.createWriteStream("./artifacts/main_logs.txt");
 
   const { configPath, onlyCheck, onlyForkDeploy, showLogs } = parseCmdLineArgs();
-  console.log(`Running script with\n  - configPath: ${configPath}\n  - onlyCheck: ${onlyCheck === true ? true : false }\n  - onlyForkDeploy: ${onlyForkDeploy === true ? true : false }\n  - showLogs: ${showLogs === true ? true : false }\n`);
+  console.log("Running script with");
+  console.log(`  - configPath: ${configPath}`);
+  console.log(`  - onlyCheck: ${onlyCheck === true ? true : false }`);
+  console.log(`  - onlyForkDeploy: ${onlyForkDeploy === true ? true : false }`);
+  console.log(`  - showLogs: ${showLogs === true ? true : false }`);
 
   const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig, mainConfigDoc: YAML.Document } = loadYamlConfig(configPath);
 
