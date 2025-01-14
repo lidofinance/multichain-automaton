@@ -1,7 +1,7 @@
 // RPC's url management
 
 export enum NetworkType {
-  Real,
+  Live,
   Forked,
 }
 

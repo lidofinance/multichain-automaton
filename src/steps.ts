@@ -51,10 +51,10 @@ export interface Context {
       name: "Spawn L1 Fork Node",
       action: async (ctx, logCallback) => {
         ctx.l1ForkNode = await spawnNode(
-          l1RpcUrl(NetworkType.Real),
+          l1RpcUrl(NetworkType.Live),
           env.number("L1_CHAIN_ID"),
           localL1RpcPort(),
-          "l1ForkOutput.txt",
+          "l1_fork_deployment_node.log",
           logCallback
         );
       }
@@ -63,10 +63,10 @@ export interface Context {
       name: "Spawn L2 Fork Node",
       action: async (ctx, logCallback) => {
         ctx.l2ForkNode = await spawnNode(
-          l2RpcUrl(NetworkType.Real),
+          l2RpcUrl(NetworkType.Live),
           env.number("L2_CHAIN_ID"),
           localL2RpcPort(),
-          "l2ForkOutput.txt",
+          "l2_fork_deployment_node.log",
           logCallback
         );
       }
@@ -79,7 +79,7 @@ export interface Context {
       name: "Deploy Governance Executor",
       action: async (ctx, logCallback) => {
         ctx.govBridgeExecutorAddressOnFork = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Forked), logCallback);
-        saveGovExecutorDeploymentArgs(ctx.govBridgeExecutorAddressOnFork, ctx.deploymentConfig, "l2GovExecutorDeployArgsForked.json");
+        saveGovExecutorDeploymentArgs(ctx.govBridgeExecutorAddressOnFork, ctx.deploymentConfig, "l2_fork_gov_executor_deployment_args.json");
       }
     },
     {
@@ -91,12 +91,12 @@ export interface Context {
         populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutorAddressOnFork, NetworkType.Forked);
         await runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts", logCallback: logCallback });
         copyArtifacts({
-          deploymentResult: "deploymentResultForkedNetwork.json",
-          l1DeploymentArgs: "l1DeploymentArgsForked.json",
-          l2DeploymentArgs: "l2DeploymentArgsForked.json"
+          deploymentResult: "deployment_fork_result.json",
+          l1DeploymentArgs: "l1_fork_deployment_args.json",
+          l2DeploymentArgs: "l2_fork_deployment_args.json"
         });
-        addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutorAddressOnFork, "deploymentResultForkedNetwork.json");
-        ctx.deployedContracts = configFromArtifacts("deploymentResultForkedNetwork.json");
+        addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutorAddressOnFork, "deployment_fork_result.json");
+        ctx.deployedContracts = configFromArtifacts("deployment_fork_result.json");
       }
     },
     {
@@ -136,13 +136,13 @@ export interface Context {
   const deployAndVerifyOnRealNetworkSteps: Step[] = [
     {
       name: "Burn L2 Deployer Nonces",
-      action: (_, logCallback) => burnL2DeployerNonces(l2RpcUrl(NetworkType.Real), NUM_L1_DEPLOYED_CONTRACTS, logCallback)
+      action: (_, logCallback) => burnL2DeployerNonces(l2RpcUrl(NetworkType.Live), NUM_L1_DEPLOYED_CONTRACTS, logCallback)
     },
     {
       name: "Deploy Governance Executor",
       action: async (ctx, logCallback) => {
-        ctx.govBridgeExecutor = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Real), logCallback);
-        saveGovExecutorDeploymentArgs(ctx.govBridgeExecutor, ctx.deploymentConfig, "l2GovExecutorDeployArgs.json");
+        ctx.govBridgeExecutor = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Live), logCallback);
+        saveGovExecutorDeploymentArgs(ctx.govBridgeExecutor, ctx.deploymentConfig, "l2_live_gov_executor_deployment_args.json");
       }
     },
     {
@@ -151,23 +151,23 @@ export interface Context {
         if (ctx.govBridgeExecutor === undefined) {
           throw Error("Gov executor wasn't deployed");
         }
-        populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutor, NetworkType.Real);
+        populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutor, NetworkType.Live);
         await runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts", logCallback: logCallback });
         copyArtifacts({
-          deploymentResult: "deploymentResultRealNetwork.json",
-          l1DeploymentArgs: "l1DeploymentArgs.json",
-          l2DeploymentArgs: "l2DeploymentArgs.json"
+          deploymentResult: "deployment_live_result.json",
+          l1DeploymentArgs: "l1_live_deployment_args.json",
+          l2DeploymentArgs: "l2_live_deployment_args.json"
         });
-        addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutor, "deploymentResultRealNetwork.json");
+        addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutor, "deployment_live_result.json");
       }
     },
     {
       name: "Verififcation",
       action: async (_, logCallback) => {
-        await runVerificationScript({ config: "l1DeploymentArgs.json", network: "l1", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
-        await runVerificationScript({ config: "l2DeploymentArgs.json", network: "l2", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
+        await runVerificationScript({ config: "l1_live_deployment_args.json", network: "l1", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
+        await runVerificationScript({ config: "l2_live_deployment_args.json", network: "l2", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
         setupGovExecutorVerification();
-        await runVerificationScript({ config: "l2GovExecutorDeployArgs.json", network: "l2", workingDirectory: "./governance-crosschain-bridges", logCallback: logCallback });
+        await runVerificationScript({ config: "l2_live_gov_executor_deployment_args.json", network: "l2", workingDirectory: "./governance-crosschain-bridges", logCallback: logCallback });
       }
     }
   ];
@@ -176,8 +176,8 @@ export interface Context {
     {
       name: "State-mate",
       action: async (ctx, logCallback) => {
-        ctx.deployedContractsOnRealNetwork = configFromArtifacts("deploymentResultRealNetwork.json");
-        setupStateMateEnvs(l1RpcUrl(NetworkType.Real), l2RpcUrl(NetworkType.Real));
+        ctx.deployedContractsOnRealNetwork = configFromArtifacts("deployment_live_result.json");
+        setupStateMateEnvs(l1RpcUrl(NetworkType.Live), l2RpcUrl(NetworkType.Live));
         setupStateMateConfig("automaton.yaml", ctx.deployedContractsOnRealNetwork, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
         await runStateMateScript({ configName: "automaton.yaml", logCallback: logCallback });
       }
@@ -189,7 +189,7 @@ export interface Context {
           ctx.deployedContractsOnRealNetwork,
           ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
           ctx.deploymentConfig,
-          l1RpcUrl(NetworkType.Real),
+          l1RpcUrl(NetworkType.Live),
           diffyscanRpcUrl(),
           env.string("L1_CHAIN_ID")
         );
@@ -199,7 +199,7 @@ export interface Context {
           ctx.deployedContractsOnRealNetwork,
           ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
           ctx.deploymentConfig,
-          l2RpcUrl(NetworkType.Real),
+          l2RpcUrl(NetworkType.Live),
           diffyscanRpcUrl(),
           env.string("L2_CHAIN_ID")
         );
@@ -210,10 +210,10 @@ export interface Context {
     {
       name: "Integration tests",
       action: async (ctx, logCallback) => {
-        const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Real), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1ForkAfterDeployOutput.txt", logCallback);
-        const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Real), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2ForkAfterDeployOutput.txt", logCallback);
+        const l1ForkNode = await spawnNode(l1RpcUrl(NetworkType.Live), env.number("L1_CHAIN_ID"), localL1RpcPort(), "l1_live_deployment_node.log", logCallback);
+        const l2ForkNode = await spawnNode(l2RpcUrl(NetworkType.Live), env.number("L2_CHAIN_ID"), localL2RpcPort(), "l2_live_deployment_node.log", logCallback);
       
-        populateDeployScriptEnvs(ctx.deploymentConfig, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], NetworkType.Real);
+        populateDeployScriptEnvs(ctx.deploymentConfig, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], NetworkType.Live);
         setupIntegrationTests(ctx.testingConfig, ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"], ctx.deployedContractsOnRealNetwork);
         await runIntegrationTestsScript({ testName: "bridging-non-rebasable.integration.test.ts", logCallback: logCallback });
         await runIntegrationTestsScript({ testName: "bridging-rebasable.integration.test.ts", logCallback: logCallback });

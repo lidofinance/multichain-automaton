@@ -75,6 +75,23 @@ docker run --env-file .env --rm \
   <build_name> ./path/to/config.yaml
 ```
 
+### Logs
+- `main.log` - Main script execution logs
+#### Fork Deployment
+- `deployment_fork_result.json` - Deployment results for forked networks
+- `l1_fork_deployment_node.log` - L1 network fork deployment node logs
+- `l2_fork_deployment_node.log` - L2 network fork deployment node logs
+- `l1_fork_deployment_args.json` - L1 forked network deployment arguments
+- `l2_fork_deployment_args.json` - L2 forked network deployment arguments
+- `l2_fork_gov_executor_deployment_args.json` - L2 forked network gov executor deployment arguments
+#### Live Deployment
+- `deployment_live_result.json` - Deployment results for live networks
+- `l1_live_deployment_node.log` - L1 network after live deployment node logs
+- `l2_live_deployment_node.log` - L2 network after live deployment node logs
+- `l1_live_deployment_args.json` - L1 live network deployment arguments
+- `l2_live_deployment_args.json` - L2 live network deployment arguments
+- `l2_live_gov_executor_deployment_args.json` - L2 live network gov executor deployment arguments
+
 ## Contributing
 
 Contributions are appreciated! Please read the [Contributing Guidelines](CONTRIBUTING.md) to get started.

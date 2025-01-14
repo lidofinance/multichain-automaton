@@ -29,7 +29,7 @@ function parseCmdLineArgs() {
 }
 
 async function main() {
-  const logStream = fs.createWriteStream("./artifacts/main_logs.txt");
+  const logStream = fs.createWriteStream("./artifacts/main.log");
 
   const { configPath, onlyCheck, onlyForkDeploy, showLogs } = parseCmdLineArgs();
   console.log("Running script with");
