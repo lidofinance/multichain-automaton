@@ -103,8 +103,15 @@ export interface Context {
       name: "State-Mate",
       action: async (ctx, logCallback) => {
         setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
-        setupStateMateConfig("state-mate-template.yaml", ctx.deployedContracts, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
-        await runStateMateScript({ configName: "automaton.yaml", logCallback: logCallback });
+        setupStateMateConfig({
+          seedConfigName: "state-mate-template.yaml",
+          newConfigName: "state-mate-fork.yaml",
+          newContractsCfg: ctx.deployedContracts,
+          mainConfig: ctx.mainConfig,
+          mainConfigDoc: ctx.mainConfigDoc,
+          l2ChainId: env.number("L2_CHAIN_ID")
+        });
+        await runStateMateScript({ configName: "state-mate-fork.yaml", logCallback: logCallback });
       }
     },
     {
@@ -178,8 +185,15 @@ export interface Context {
       action: async (ctx, logCallback) => {
         ctx.deployedContractsOnRealNetwork = configFromArtifacts("deployment_live_result.json");
         setupStateMateEnvs(l1RpcUrl(NetworkType.Live), l2RpcUrl(NetworkType.Live));
-        setupStateMateConfig("automaton.yaml", ctx.deployedContractsOnRealNetwork, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
-        await runStateMateScript({ configName: "automaton.yaml", logCallback: logCallback });
+        setupStateMateConfig({
+          seedConfigName: "state-mate-template.yaml",
+          newConfigName: "state-mate-live.yaml",
+          newContractsCfg: ctx.deployedContractsOnRealNetwork,
+          mainConfig: ctx.mainConfig,
+          mainConfigDoc: ctx.mainConfigDoc,
+          l2ChainId: env.number("L2_CHAIN_ID")
+        });
+        await runStateMateScript({ configName: "state-mate-live.yaml", logCallback: logCallback });
       }
     },
     {

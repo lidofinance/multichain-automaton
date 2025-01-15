@@ -22,19 +22,27 @@ export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: strin
   );
 }
 
-export function setupStateMateConfig(
-  configName: string,
+export function setupStateMateConfig({
+  seedConfigName,
+  newConfigName,
+  newContractsCfg,
+  mainConfig,
+  mainConfigDoc,
+  l2ChainId
+} : {
+  seedConfigName: string,
+  newConfigName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
   mainConfig: MainConfig,
   mainConfigDoc: YAML.Document,
   l2ChainId: number,
-) {
+}) {
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {
     return sectionEntries.find((addr) => addr.anchor == anchor) as YAML.Scalar;
   }
 
-  const seedConfigPath = `./configs/${configName}`;
+  const seedConfigPath = `./configs/${seedConfigName}`;
   const seedDoc = YAML.parseDocument(fs.readFileSync(seedConfigPath, "utf-8"), { intAsBigInt: true });
   const doc = new YAML.Document(seedDoc);
 
@@ -147,7 +155,7 @@ export function setupStateMateConfig(
   l2TokenBridgeChecks.set("isWithdrawalsEnabled", l2TokenBridgeConfig["withdrawalsEnabled"]);
 
   fs.mkdirSync("./artifacts/configs", { recursive: true });
-  fs.writeFileSync(`./artifacts/configs/${configName}`, doc.toString());
+  fs.writeFileSync(`./artifacts/configs/${newConfigName}`, doc.toString());
   fs.cpSync("./state-mate/configs/optimism/abi", "./artifacts/configs/abi", { recursive: true });
 
   function setDomainSeparatorAndEIP712Domain(token: string, address: string, version: number) {
