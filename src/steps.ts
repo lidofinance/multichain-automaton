@@ -103,7 +103,7 @@ export interface Context {
       name: "State-Mate",
       action: async (ctx, logCallback) => {
         setupStateMateEnvs(l1RpcUrl(NetworkType.Forked), l2RpcUrl(NetworkType.Forked));
-        setupStateMateConfig("automaton.yaml", ctx.deployedContracts, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
+        setupStateMateConfig("state-mate-template.yaml", ctx.deployedContracts, ctx.mainConfig, ctx.mainConfigDoc, env.number("L2_CHAIN_ID"));
         await runStateMateScript({ configName: "automaton.yaml", logCallback: logCallback });
       }
     },

@@ -5,7 +5,8 @@
 [submodule "state-mate"]
 	path = state-mate
 	url = https://github.com/lidofinance/state-mate.git
-    branch = cgf/automaton-config
+    branch = main
+    commit = 5ff76bff0a6e3b9199ce7e339e3fc2b72266ccfc
 [submodule "diffyscan"]
 	path = diffyscan
 	url = https://github.com/lidofinance/diffyscan.git

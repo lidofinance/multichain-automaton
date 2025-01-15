@@ -34,7 +34,7 @@ export function setupStateMateConfig(
     return sectionEntries.find((addr) => addr.anchor == anchor) as YAML.Scalar;
   }
 
-  const seedConfigPath = `./state-mate/configs/optimism/${configName}`;
+  const seedConfigPath = `./configs/${configName}`;
   const seedDoc = YAML.parseDocument(fs.readFileSync(seedConfigPath, "utf-8"), { intAsBigInt: true });
   const doc = new YAML.Document(seedDoc);
 
