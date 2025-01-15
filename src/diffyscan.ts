@@ -8,13 +8,10 @@ import { DeployParameters } from "./config";
 import env from "./env";
 import { LogCallback } from "./log-utils";
 
-const CONFIGS_PATH = "./diffyscan/config_samples/optimism/automaton";
-
 export function setupDiffyscan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
   govBridgeExecutor: string,
-   
   deploymentConfig: DeployParameters,
   remoteRpcUrl: string,
   localRpcUrl: string,
@@ -38,8 +35,9 @@ export function setupDiffyscan(
   const l1Config = deploymentConfig.l1;
   const l2Config = deploymentConfig.l2;
 
-  // ethereum
-  const fileNameL1 = `${CONFIGS_PATH}/automaton_config_L1.json`;
+  // l1
+  const diffiscanConfigL1Name = "diffiscan_config_L1.json";
+  const fileNameL1 = `./configs/${diffiscanConfigL1Name}`;
   const optimismTestnetConfigL1 = JSON.parse(readFileSync(fileNameL1, "utf8"));
   optimismTestnetConfigL1["contracts"] = {
     [newContractsCfg["ethereum"]["bridgeProxyAddress"]]: "OssifiableProxy",
@@ -70,12 +68,13 @@ export function setupDiffyscan(
     ],
   };
   writeFileSync(
-    "./artifacts/configs/automaton_config_L1.json",
+    `./artifacts/configs/${diffiscanConfigL1Name}`,
     JSON.stringify(optimismTestnetConfigL1, null, 2),
   );
 
   // gov executor
-  const fileNameL2Gov = `${CONFIGS_PATH}/automaton_config_L2_gov.json`;
+  const diffiscanConfigL2GovName = "diffyscan_config_L2_gov.json";
+  const fileNameL2Gov = `./configs/${diffiscanConfigL2GovName}`;
   const optimismTestnetConfigL2Gov = JSON.parse(readFileSync(fileNameL2Gov, "utf8"));
   optimismTestnetConfigL2Gov["contracts"] = {
     [govBridgeExecutor]: "OptimismBridgeExecutor",
@@ -92,12 +91,13 @@ export function setupDiffyscan(
     ],
   };
   writeFileSync(
-    "./artifacts/configs/automaton_config_L2_gov.json",
+    `./artifacts/configs/${diffiscanConfigL2GovName}`,
     JSON.stringify(optimismTestnetConfigL2Gov, null, 2),
   );
 
-  // optimism
-  const fileNameL2 = `${CONFIGS_PATH}/automaton_config_L2.json`;
+  // L2
+  const diffyscanConfigL2 = "diffyscan_config_L2.json";
+  const fileNameL2 = `./configs/${diffyscanConfigL2}`;
   const optimismTestnetConfigL2 = JSON.parse(readFileSync(fileNameL2, "utf8"));
   optimismTestnetConfigL2["contracts"] = {
     [newContractsCfg["optimism"]["tokenRateOracleProxyAddress"]]: "OssifiableProxy",
@@ -167,7 +167,7 @@ export function setupDiffyscan(
   };
 
   writeFileSync(
-    "./artifacts/configs/automaton_config_L2.json",
+    `./artifacts/configs/${diffyscanConfigL2}`,
     JSON.stringify(optimismTestnetConfigL2, null, 2),
   );
 }
