@@ -89,7 +89,7 @@ export interface Context {
           throw Error("Gov executor wasn't deployed");
         }
         populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutorAddressOnFork, NetworkType.Forked);
-        await runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts", logCallback: logCallback });
+        await runDeployScript({ scriptPath: "./scripts/optimism/deploy-bridge-without-notifier.ts", logCallback: logCallback });
         copyArtifacts({
           deploymentResult: "deployment_fork_result.json",
           l1DeploymentArgs: "l1_fork_deployment_args.json",
@@ -152,7 +152,7 @@ export interface Context {
           throw Error("Gov executor wasn't deployed");
         }
         populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutor, NetworkType.Live);
-        await runDeployScript({ scriptPath: "./scripts/optimism/deploy-automaton.ts", logCallback: logCallback });
+        await runDeployScript({ scriptPath: "./scripts/optimism/deploy-bridge-without-notifier.ts", logCallback: logCallback });
         copyArtifacts({
           deploymentResult: "deployment_live_result.json",
           l1DeploymentArgs: "l1_live_deployment_args.json",
