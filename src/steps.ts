@@ -207,7 +207,7 @@ export interface Context {
           diffyscanRpcUrl(),
           env.string("L1_CHAIN_ID")
         );
-        await runDiffyscanScript({ config: "automaton_config_L1.json", withBinaryComparison: true, logCallback: logCallback });
+        await runDiffyscanScript({ config: "diffyscan_config_L1.json", withBinaryComparison: true, logCallback: logCallback });
       
         setupDiffyscan(
           ctx.deployedContractsOnRealNetwork,
@@ -217,8 +217,8 @@ export interface Context {
           diffyscanRpcUrl(),
           env.string("L2_CHAIN_ID")
         );
-        await runDiffyscanScript({ config: "automaton_config_L2_gov.json", withBinaryComparison: true, logCallback: logCallback });
-        await runDiffyscanScript({ config: "automaton_config_L2.json", withBinaryComparison: true, logCallback: logCallback });
+        await runDiffyscanScript({ config: "diffyscan_config_L2_gov.json", withBinaryComparison: true, logCallback: logCallback });
+        await runDiffyscanScript({ config: "diffyscan_config_L2.json", withBinaryComparison: true, logCallback: logCallback });
       }
     },
     {

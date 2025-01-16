@@ -69,9 +69,10 @@ docker buildx build --platform linux/amd64 -t <build_name> .
 
 Provide .env file and path to config to run it:
 
-```
+```bash
 docker run --env-file .env --rm \
-  -v $(pwd)/path/to/config.yaml:/app/path/to/config.yaml \
+  -v $(pwd)/configs:/app/configs \
+  -v $(pwd)/artifacts:/app/artifacts \
   <build_name> ./path/to/config.yaml
 ```
 

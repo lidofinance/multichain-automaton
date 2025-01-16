@@ -36,7 +36,7 @@ export function setupDiffyscan(
   const l2Config = deploymentConfig.l2;
 
   // l1
-  const diffiscanConfigL1Name = "diffiscan_config_L1.json";
+  const diffiscanConfigL1Name = "diffyscan_config_L1.json";
   const fileNameL1 = `./configs/${diffiscanConfigL1Name}`;
   const optimismTestnetConfigL1 = JSON.parse(readFileSync(fileNameL1, "utf8"));
   optimismTestnetConfigL1["contracts"] = {
