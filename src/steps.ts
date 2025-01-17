@@ -142,15 +142,15 @@ export interface Context {
   
   const deployAndVerifyOnRealNetworkSteps: Step[] = [
     {
-      name: "Burn L2 Deployer Nonces",
-      action: (_, logCallback) => burnL2DeployerNonces(l2RpcUrl(NetworkType.Live), NUM_L1_DEPLOYED_CONTRACTS, logCallback)
-    },
-    {
       name: "Deploy Governance Executor",
       action: async (ctx, logCallback) => {
         ctx.govBridgeExecutor = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Live), logCallback);
         saveGovExecutorDeploymentArgs(ctx.govBridgeExecutor, ctx.deploymentConfig, "l2_live_gov_executor_deployment_args.json");
       }
+    },
+    {
+      name: "Burn L2 Deployer Nonces",
+      action: (_, logCallback) => burnL2DeployerNonces(l2RpcUrl(NetworkType.Live), NUM_L1_DEPLOYED_CONTRACTS, logCallback)
     },
     {
       name: "Run Deploy Script",
