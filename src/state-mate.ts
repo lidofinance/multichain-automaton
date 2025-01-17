@@ -94,14 +94,15 @@ export function setupStateMateConfig({
   const opStackTokenRatePusherChecks = opStackTokenRatePusher.get("checks") as YAML.YAMLMap;
   const opStackTokenRatePusherConfig = mainConfig.deployParameters.l1.opStackTokenRatePusher;
   opStackTokenRatePusherChecks.set("L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE", Number(opStackTokenRatePusherConfig["l2GasLimitForPushingTokenRate"]));
-
+  opStackTokenRatePusherChecks.set("GENESIS_TIME", item("genesisTime", mainConfigParametersSectionEntries).value);
+  
   // L1TokenBridge
   const l1TokenBridge = l1Contracts.get("tokenBridge") as YAML.YAMLMap;
   const l1TokenBridgeChecks = l1TokenBridge.get("checks") as YAML.YAMLMap;
   const l1TokenBridgeConfig = mainConfig.deployParameters.l1.tokenBridge;
   l1TokenBridgeChecks.set("isDepositsEnabled", l1TokenBridgeConfig["depositsEnabled"]);
   l1TokenBridgeChecks.set("isWithdrawalsEnabled", l1TokenBridgeConfig["withdrawalsEnabled"]);
-
+  l1TokenBridgeChecks.set("GENESIS_TIME", item("genesisTime", mainConfigParametersSectionEntries).value);
 
   // L2 -----------------------------------------
   const l2Section = doc.get("l2") as YAML.YAMLMap;

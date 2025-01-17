@@ -49,7 +49,7 @@ l1:
         WSTETH: *wstETH
         L2_TOKEN_RATE_ORACLE: *l2TokenRateOracle
         MESSENGER: *l1CrossDomainMessenger
-        GENESIS_TIME: 1655733600
+        GENESIS_TIME: 0
         L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE: 300000
         SECONDS_PER_SLOT: 12
         TOKEN_RATE_DECIMALS: 27
@@ -82,7 +82,7 @@ l1:
         WITHDRAWALS_ENABLER_ROLE: *WITHDRAWALS_ENABLER_ROLE
         ACCOUNTING_ORACLE: *accountingOracle
         WSTETH: *wstETH
-        GENESIS_TIME: 1655733600
+        GENESIS_TIME: 0
         SECONDS_PER_SLOT: 12
         TOKEN_RATE_DECIMALS: 27
         getContractVersion: 2
