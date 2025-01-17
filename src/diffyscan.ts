@@ -191,7 +191,7 @@ export async function runDiffyscanScript({
     "run",
     "diffyscan",
     `../artifacts/configs/${config}`,
-    "./hardhat_configs/automaton_hardhat_config.js",
+    "--hardhat-path", "./hardhat_configs/automaton_hardhat_config.js",
     "--yes",
   ];
   if (withBinaryComparison) {
