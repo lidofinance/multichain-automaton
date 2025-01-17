@@ -6,7 +6,7 @@
 	path = state-mate
 	url = https://github.com/lidofinance/state-mate.git
     branch = main
-    commit = 5ff76bff0a6e3b9199ce7e339e3fc2b72266ccfc
+    commit = 165b3b351b2f8bcf0cb4c01e2219878e9974d217
 [submodule "diffyscan"]
 	path = diffyscan
 	url = https://github.com/lidofinance/diffyscan.git
