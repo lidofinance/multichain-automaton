@@ -22,7 +22,7 @@ import { runIntegrationTestsScript, setupIntegrationTests } from "./integration-
 import { LogCallback, LogType } from "./log-utils";
 import { diffyscanRpcUrl, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, NetworkType } from "./rpc-utils";
 import { runStateMateScript, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
-import { runVerificationScript, setupGovExecutorVerification } from "./verification";
+import { runVerificationScript, setupGovExecutorVerification, waitForBlockFinalization } from "./verification";
 
 const NUM_L1_DEPLOYED_CONTRACTS = 10;
 
@@ -169,16 +169,48 @@ export interface Context {
       }
     },
     {
+      name: "Wait for Finalization",
+      action: async(_, logCallback) => {
+        const deployResult = configFromArtifacts("deployment_live_result.json");
+
+        const l1LastBlockNumber = deployResult["ethereum"]["lastBlockNumber"];
+        const l1Provider = new JsonRpcProvider(l1RpcUrl(NetworkType.Live));
+        await waitForBlockFinalization(l1Provider, l1LastBlockNumber, logCallback);
+
+        const l2Provider = new JsonRpcProvider(l2RpcUrl(NetworkType.Live));
+        const l2LastBlockNumber = deployResult["optimism"]["lastBlockNumber"];
+        await waitForBlockFinalization(l2Provider, l2LastBlockNumber, logCallback);
+      }
+    },
+    {
       name: "Verififcation",
       action: async (_, logCallback) => {
-        await runVerificationScript({ config: "l1_live_deployment_args.json", network: "l1", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
-        await runVerificationScript({ config: "l2_live_deployment_args.json", network: "l2", workingDirectory: "./lido-l2-with-steth", logCallback: logCallback });
+        await runVerificationScript({
+          config: "l1_live_deployment_args.json",
+          network: "l1",
+          workingDirectory: "./lido-l2-with-steth",
+          rpcUrl: l1RpcUrl(NetworkType.Live),
+          logCallback: logCallback
+        });
+        await runVerificationScript({
+          config: "l2_live_deployment_args.json",
+          network: "l2",
+          workingDirectory: "./lido-l2-with-steth",
+          rpcUrl: l2RpcUrl(NetworkType.Live), 
+          logCallback: logCallback
+        });
         setupGovExecutorVerification();
-        await runVerificationScript({ config: "l2_live_gov_executor_deployment_args.json", network: "l2", workingDirectory: "./governance-crosschain-bridges", logCallback: logCallback });
+        await runVerificationScript({
+          config: "l2_live_gov_executor_deployment_args.json",
+          network: "l2",
+          workingDirectory: "./governance-crosschain-bridges",
+          rpcUrl: l2RpcUrl(NetworkType.Live), 
+          logCallback: logCallback
+        });
       }
     }
   ];
-  
+
   const testDeployedOnRealNetworkSteps: Step[] = [
     {
       name: "State-mate",
