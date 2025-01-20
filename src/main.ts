@@ -17,6 +17,7 @@ function parseCmdLineArgs() {
     .option("--onlyCheck", "only check the real network deployment")
     .option("--onlyForkDeploy", "only deploy to the forked network")
     .option("--showLogs", "show logs in console")
+    .option("--startFromStep", "start from step with index")
     .parse();
 
   const configPath = program.args[0];
@@ -25,18 +26,20 @@ function parseCmdLineArgs() {
     onlyCheck: program.getOptionValue("onlyCheck"),
     onlyForkDeploy: program.getOptionValue("onlyForkDeploy"),
     showLogs: program.getOptionValue("showLogs"),
+    startFromStep: Number(program.getOptionValue("startFromStep") ?? 0),
   };
 }
 
 async function main() {
   const logStream = fs.createWriteStream("./artifacts/main.log");
 
-  const { configPath, onlyCheck, onlyForkDeploy, showLogs } = parseCmdLineArgs();
+  const { configPath, onlyCheck, onlyForkDeploy, showLogs, startFromStep } = parseCmdLineArgs();
   console.log("Running script with");
   console.log(`  - configPath: ${configPath}`);
   console.log(`  - onlyCheck: ${!!onlyCheck}`);
   console.log(`  - onlyForkDeploy: ${!!onlyForkDeploy}`);
   console.log(`  - showLogs: ${!!showLogs}`);
+  console.log(`  - startFromStep: ${startFromStep}`);
 
   const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig; mainConfigDoc: YAML.Document } =
     loadYamlConfig(configPath);
@@ -51,9 +54,14 @@ async function main() {
   const progress = new ProgressBar(showLogs);
   const steps = getSteps(onlyForkDeploy, onlyCheck);
 
+  if (startFromStep < 0 || startFromStep >= steps.length) {
+    console.error(`Step index is out of bounds ${startFromStep}`);
+    process.exit(1);
+  }
+
   progress.start(steps.length);
 
-  for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+  for (let stepIdx = startFromStep; stepIdx < steps.length; stepIdx++) {
     const { name, action } = steps[stepIdx];
     progress.update(stepIdx, name);
     logStream.write(`[${new Date().toISOString()}] ${name}`);
