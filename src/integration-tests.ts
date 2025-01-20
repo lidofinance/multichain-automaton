@@ -4,10 +4,11 @@ import { runCommand } from "./command-utils";
 import { TestingParameters } from "./config";
 import { LogCallback } from "./log-utils";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function setupIntegrationTests(
   testingParameters: TestingParameters,
   govBridgeExecutor: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   newContractsCfg: any,
 ) {
   dotenv.populate(process.env as { [key: string]: string }, {
