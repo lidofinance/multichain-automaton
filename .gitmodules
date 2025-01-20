@@ -1,0 +1,18 @@
+[submodule "lido-l2-with-steth"]
+	path = lido-l2-with-steth
+	url = https://github.com/lidofinance/lido-l2-with-steth.git
+    branch = feature/automaton-deploy-script
+[submodule "state-mate"]
+	path = state-mate
+	url = https://github.com/lidofinance/state-mate.git
+    branch = main
+    commit = 165b3b351b2f8bcf0cb4c01e2219878e9974d217
+[submodule "diffyscan"]
+	path = diffyscan
+	url = https://github.com/lidofinance/diffyscan.git
+    branch = main
+    commit = 2c1fba68bc112f51a24d274371f7e43f2c5886bf
+[submodule "governance-crosschain-bridges"]
+	path = governance-crosschain-bridges
+	url = https://github.com/lidofinance/governance-crosschain-bridges.git
+    branch = automaton-config
