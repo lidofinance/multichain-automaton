@@ -183,7 +183,7 @@ export interface Context {
       }
     },
     {
-      name: "Verififcation",
+      name: "Verification",
       action: async (_, logCallback) => {
         await runVerificationScript({
           config: "l1_live_deployment_args.json",

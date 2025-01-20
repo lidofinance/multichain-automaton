@@ -4,7 +4,7 @@
 
 ## Overview
 
-**Multichain Automaton** is a sophisticated deployment and verification script designed to streamline the **deployment of stETH/wstETH [custom token bridge following reference architecture](https://docs.lido.fi/token-guides/wsteth-bridging-guide#reference-architecture-and-permissions-setup) solutions on OP Stack-compatible networks** such as OP Mainnet, Base, Zircuit, and Mode. It utilizes recommended initialization parameters and automates the verification of deployment artifacts.
+**Multichain Automaton** is a sophisticated deployment and verification script designed to streamline the **deployment of stETH/wstETH [custom token bridge following reference architecture](https://docs.lido.fi/token-guides/wsteth-bridging-guide#reference-architecture-and-permissions-setup) solutions on OP Stack-compatible networks** for example OP Mainnet, Base, Zircuit, and Mode. It utilizes recommended initialization parameters and automates the verification of deployment artifacts.
 
 ## Why Use Multichain Automaton?
 
@@ -61,7 +61,7 @@ yarn start ./path/to/config.yaml
 
 ### Docker
 
-To сreate containe use this command with `linux/amd64` architecture:
+To create the image use this command with `linux/amd64` architecture:
 
 ```bash
 docker buildx build --platform linux/amd64 -t <build_name> .

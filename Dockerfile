@@ -22,5 +22,3 @@ RUN foundryup
 RUN chmod +x ./initialize.sh && ./initialize.sh
 
 ENTRYPOINT ["yarn", "start"]
-
-CMD ["./configs/unichain_sepolia.yaml"]

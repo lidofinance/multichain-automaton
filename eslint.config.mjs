@@ -23,7 +23,8 @@ export default [
       "lido-l2-with-steth/*",
       "governance-crosschain-bridges/*",
       "hardhat.config.js",
-      "eslint.config.mjs"
+      "eslint.config.mjs",
+      "commitlint.config.js"
     ],
   },
   js.configs.recommended,

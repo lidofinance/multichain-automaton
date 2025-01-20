@@ -34,9 +34,9 @@ async function main() {
   const { configPath, onlyCheck, onlyForkDeploy, showLogs } = parseCmdLineArgs();
   console.log("Running script with");
   console.log(`  - configPath: ${configPath}`);
-  console.log(`  - onlyCheck: ${onlyCheck === true ? true : false }`);
-  console.log(`  - onlyForkDeploy: ${onlyForkDeploy === true ? true : false }`);
-  console.log(`  - showLogs: ${showLogs === true ? true : false }`);
+  console.log(`  - onlyCheck: ${!!onlyCheck}`);
+  console.log(`  - onlyForkDeploy: ${!!onlyForkDeploy}`);
+  console.log(`  - showLogs: ${!!showLogs}`);
 
   const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig, mainConfigDoc: YAML.Document } = loadYamlConfig(configPath);
 
