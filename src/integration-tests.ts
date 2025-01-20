@@ -5,7 +5,11 @@ import { TestingParameters } from "./config";
 import { LogCallback } from "./log-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function setupIntegrationTests(testingParameters: TestingParameters, govBridgeExecutor: string, newContractsCfg: any) {
+export function setupIntegrationTests(
+  testingParameters: TestingParameters,
+  govBridgeExecutor: string,
+  newContractsCfg: any,
+) {
   dotenv.populate(process.env as { [key: string]: string }, {
     TESTING_USE_DEPLOYED_CONTRACTS: "true",
     TESTING_OPT_L1_LIDO: testingParameters.lido,
@@ -29,7 +33,7 @@ export async function runIntegrationTestsScript({
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
-  logCallback
+  logCallback,
 }: {
   testName: string;
   throwOnFail?: boolean;
@@ -45,6 +49,6 @@ export async function runIntegrationTestsScript({
     throwOnFail,
     tryNumber,
     maxTries,
-    logCallback: logCallback
+    logCallback: logCallback,
   });
 }

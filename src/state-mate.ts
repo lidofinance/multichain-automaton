@@ -28,15 +28,15 @@ export function setupStateMateConfig({
   newContractsCfg,
   mainConfig,
   mainConfigDoc,
-  l2ChainId
-} : {
-  seedConfigName: string,
-  newConfigName: string,
+  l2ChainId,
+}: {
+  seedConfigName: string;
+  newConfigName: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  newContractsCfg: any,
-  mainConfig: MainConfig,
-  mainConfigDoc: YAML.Document,
-  l2ChainId: number,
+  newContractsCfg: any;
+  mainConfig: MainConfig;
+  mainConfigDoc: YAML.Document;
+  l2ChainId: number;
 }) {
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {
     return sectionEntries.find((addr) => addr.anchor == anchor) as YAML.Scalar;
@@ -56,13 +56,28 @@ export function setupStateMateConfig({
   // copy 'parameter' section
   item("agent", parametersSectionEntries).value = item("agent", mainConfigParametersSectionEntries).value;
   item("lido", parametersSectionEntries).value = item("lido", mainConfigParametersSectionEntries).value;
-  item("accountingOracle", parametersSectionEntries).value = item("accountingOracle", mainConfigParametersSectionEntries).value;
+  item("accountingOracle", parametersSectionEntries).value = item(
+    "accountingOracle",
+    mainConfigParametersSectionEntries,
+  ).value;
   item("wstETH", parametersSectionEntries).value = item("wstETH", mainConfigParametersSectionEntries).value;
   item("stETH", parametersSectionEntries).value = item("stETH", mainConfigParametersSectionEntries).value;
-  item("l1EmergencyBreaksMultisig", parametersSectionEntries).value = item("l1EmergencyBreaksMultisig", mainConfigParametersSectionEntries).value;
-  item("l2EmergencyBreaksMultisig", parametersSectionEntries).value = item("l2EmergencyBreaksMultisig", mainConfigParametersSectionEntries).value;
-  item("l1CrossDomainMessenger", parametersSectionEntries).value = item("l1CrossDomainMessenger", mainConfigParametersSectionEntries).value;
-  item("l2CrossDomainMessenger", parametersSectionEntries).value = item("l2CrossDomainMessenger", mainConfigParametersSectionEntries).value;
+  item("l1EmergencyBreaksMultisig", parametersSectionEntries).value = item(
+    "l1EmergencyBreaksMultisig",
+    mainConfigParametersSectionEntries,
+  ).value;
+  item("l2EmergencyBreaksMultisig", parametersSectionEntries).value = item(
+    "l2EmergencyBreaksMultisig",
+    mainConfigParametersSectionEntries,
+  ).value;
+  item("l1CrossDomainMessenger", parametersSectionEntries).value = item(
+    "l1CrossDomainMessenger",
+    mainConfigParametersSectionEntries,
+  ).value;
+  item("l2CrossDomainMessenger", parametersSectionEntries).value = item(
+    "l2CrossDomainMessenger",
+    mainConfigParametersSectionEntries,
+  ).value;
 
   const deployedSection = doc.get("deployed") as YAML.YAMLMap;
 
@@ -93,9 +108,12 @@ export function setupStateMateConfig({
   const opStackTokenRatePusher = l1Contracts.get("opStackTokenRatePusher") as YAML.YAMLMap;
   const opStackTokenRatePusherChecks = opStackTokenRatePusher.get("checks") as YAML.YAMLMap;
   const opStackTokenRatePusherConfig = mainConfig.deployParameters.l1.opStackTokenRatePusher;
-  opStackTokenRatePusherChecks.set("L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE", Number(opStackTokenRatePusherConfig["l2GasLimitForPushingTokenRate"]));
+  opStackTokenRatePusherChecks.set(
+    "L2_GAS_LIMIT_FOR_PUSHING_TOKEN_RATE",
+    Number(opStackTokenRatePusherConfig["l2GasLimitForPushingTokenRate"]),
+  );
   opStackTokenRatePusherChecks.set("GENESIS_TIME", item("genesisTime", mainConfigParametersSectionEntries).value);
-  
+
   // L1TokenBridge
   const l1TokenBridge = l1Contracts.get("tokenBridge") as YAML.YAMLMap;
   const l1TokenBridgeChecks = l1TokenBridge.get("checks") as YAML.YAMLMap;
@@ -126,7 +144,11 @@ export function setupStateMateConfig({
   l2WstETHChecks.set("name", l2WstETHConfig["name"]);
   l2WstETHChecks.set("symbol", l2WstETHConfig["symbol"]);
   l2WstETHChecks.set("getContractVersion", Number(l2WstETHConfig["signingDomainVersion"]));
-  setDomainSeparatorAndEIP712Domain("wstETH", newContractsCfg["optimism"]["tokenProxyAddress"], l2WstETHConfig.signingDomainVersion);
+  setDomainSeparatorAndEIP712Domain(
+    "wstETH",
+    newContractsCfg["optimism"]["tokenProxyAddress"],
+    l2WstETHConfig.signingDomainVersion,
+  );
 
   // L2StETH
   const l2StETH = l2Contracts.get("stETH") as YAML.YAMLMap;
@@ -135,16 +157,32 @@ export function setupStateMateConfig({
   l2StETHChecks.set("name", l2StETHConfig["name"]);
   l2StETHChecks.set("symbol", l2StETHConfig["symbol"]);
   l2StETHChecks.set("getContractVersion", Number(l2StETHConfig["signingDomainVersion"]));
-  setDomainSeparatorAndEIP712Domain("stETH", newContractsCfg["optimism"]["tokenRebasableProxyAddress"], l2StETHConfig.signingDomainVersion);
+  setDomainSeparatorAndEIP712Domain(
+    "stETH",
+    newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
+    l2StETHConfig.signingDomainVersion,
+  );
 
   // TokenRateOracle
   const tokenRateOracle = l2Contracts.get("tokenRateOracle") as YAML.YAMLMap;
   const tokenRateOracleChecks = tokenRateOracle.get("checks") as YAML.YAMLMap;
   const tokenRateOracleConfig = mainConfig.deployParameters.l2.tokenRateOracle;
-  tokenRateOracleChecks.set("MAX_ALLOWED_L2_TO_L1_CLOCK_LAG", Number(tokenRateOracleConfig["maxAllowedL2ToL1ClockLag"]));
-  tokenRateOracleChecks.set("MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP", Number(tokenRateOracleConfig["maxAllowedTokenRateDeviationPerDayBp"]));
-  tokenRateOracleChecks.set("MIN_TIME_BETWEEN_TOKEN_RATE_UPDATES", Number(tokenRateOracleConfig["minTimeBetweenTokenRateUpdates"]));
-  tokenRateOracleChecks.set("OLDEST_RATE_ALLOWED_IN_PAUSE_TIME_SPAN", Number(tokenRateOracleConfig["oldestRateAllowedInPauseTimeSpan"]));
+  tokenRateOracleChecks.set(
+    "MAX_ALLOWED_L2_TO_L1_CLOCK_LAG",
+    Number(tokenRateOracleConfig["maxAllowedL2ToL1ClockLag"]),
+  );
+  tokenRateOracleChecks.set(
+    "MAX_ALLOWED_TOKEN_RATE_DEVIATION_PER_DAY_BP",
+    Number(tokenRateOracleConfig["maxAllowedTokenRateDeviationPerDayBp"]),
+  );
+  tokenRateOracleChecks.set(
+    "MIN_TIME_BETWEEN_TOKEN_RATE_UPDATES",
+    Number(tokenRateOracleConfig["minTimeBetweenTokenRateUpdates"]),
+  );
+  tokenRateOracleChecks.set(
+    "OLDEST_RATE_ALLOWED_IN_PAUSE_TIME_SPAN",
+    Number(tokenRateOracleConfig["oldestRateAllowedInPauseTimeSpan"]),
+  );
   tokenRateOracleChecks.set("TOKEN_RATE_OUTDATED_DELAY", Number(tokenRateOracleConfig["tokenRateOutdatedDelay"]));
   tokenRateOracleChecks.set("isTokenRateUpdatesPaused", !tokenRateOracleConfig["updateEnabled"]);
 
@@ -165,7 +203,15 @@ export function setupStateMateConfig({
     const name = checks.get("name") as string;
     const wstETHDomainSeparator = domainSeparator(name, version, l2ChainId, address);
     checks.set("DOMAIN_SEPARATOR", wstETHDomainSeparator);
-    checks.set("eip712Domain", ["0x0f",name,version,l2ChainId,address,"0x0000000000000000000000000000000000000000000000000000000000000000",[]]);
+    checks.set("eip712Domain", [
+      "0x0f",
+      name,
+      version,
+      l2ChainId,
+      address,
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      [],
+    ]);
   }
 
   function domainSeparator(name: string, version: number, chainId: number, addr: string) {
@@ -179,7 +225,7 @@ export function setupStateMateConfig({
       [typeHash, hashedName, hashedVersion, chainId, addr],
     );
     return ethers.keccak256(encodedParams);
-  }  
+  }
 }
 
 export async function runStateMateScript({
@@ -187,7 +233,7 @@ export async function runStateMateScript({
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
-  logCallback
+  logCallback,
 }: {
   configName: string;
   throwOnFail?: boolean;
@@ -203,6 +249,6 @@ export async function runStateMateScript({
     throwOnFail,
     tryNumber,
     maxTries,
-    logCallback: logCallback
+    logCallback: logCallback,
   });
 }

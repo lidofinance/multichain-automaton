@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync} from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import process from "node:process";
 
 import dotenv from "dotenv";
@@ -15,7 +15,7 @@ export function setupDiffyscan(
   deploymentConfig: DeployParameters,
   remoteRpcUrl: string,
   localRpcUrl: string,
-  chainID: string
+  chainID: string,
 ) {
   dotenv.populate(
     process.env as { [key: string]: string },
@@ -67,10 +67,7 @@ export function setupDiffyscan(
       Number(l1Config.opStackTokenRatePusher.l2GasLimitForPushingTokenRate),
     ],
   };
-  writeFileSync(
-    `./artifacts/configs/${diffiscanConfigL1Name}`,
-    JSON.stringify(optimismTestnetConfigL1, null, 2),
-  );
+  writeFileSync(`./artifacts/configs/${diffiscanConfigL1Name}`, JSON.stringify(optimismTestnetConfigL1, null, 2));
 
   // gov executor
   const diffiscanConfigL2GovName = "diffyscan_config_L2_gov.json";
@@ -90,10 +87,7 @@ export function setupDiffyscan(
       l2Config.govBridgeExecutor.ovmGuiardian,
     ],
   };
-  writeFileSync(
-    `./artifacts/configs/${diffiscanConfigL2GovName}`,
-    JSON.stringify(optimismTestnetConfigL2Gov, null, 2),
-  );
+  writeFileSync(`./artifacts/configs/${diffiscanConfigL2GovName}`, JSON.stringify(optimismTestnetConfigL2Gov, null, 2));
 
   // L2
   const diffyscanConfigL2 = "diffyscan_config_L2.json";
@@ -166,10 +160,7 @@ export function setupDiffyscan(
     ],
   };
 
-  writeFileSync(
-    `./artifacts/configs/${diffyscanConfigL2}`,
-    JSON.stringify(optimismTestnetConfigL2, null, 2),
-  );
+  writeFileSync(`./artifacts/configs/${diffyscanConfigL2}`, JSON.stringify(optimismTestnetConfigL2, null, 2));
 }
 
 export async function runDiffyscanScript({
@@ -178,10 +169,10 @@ export async function runDiffyscanScript({
   throwOnFail = true,
   tryNumber = 1,
   maxTries = 3,
-  logCallback
+  logCallback,
 }: {
   config: string;
-  withBinaryComparison: boolean,
+  withBinaryComparison: boolean;
   throwOnFail?: boolean;
   tryNumber?: number;
   maxTries?: number;
@@ -191,7 +182,8 @@ export async function runDiffyscanScript({
     "run",
     "diffyscan",
     `../artifacts/configs/${config}`,
-    "--hardhat-path", "./hardhat_configs/automaton_hardhat_config.js",
+    "--hardhat-path",
+    "./hardhat_configs/automaton_hardhat_config.js",
     "--yes",
   ];
   if (withBinaryComparison) {

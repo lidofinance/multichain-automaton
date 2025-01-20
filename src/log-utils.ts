@@ -6,7 +6,7 @@ export enum LogType {
 }
 export type LogCallback = (message: string, type: LogType) => void;
 
-export function logToStream(stream: Writable, message: string, logType: LogType)  {
+export function logToStream(stream: Writable, message: string, logType: LogType) {
   switch (logType) {
     case LogType.Level1:
       stream.write(`[${new Date().toISOString()}] ${message}\n`);

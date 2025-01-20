@@ -54,7 +54,7 @@ l1:
         SECONDS_PER_SLOT: 12
         TOKEN_RATE_DECIMALS: 27
         supportsInterface:
-          - args: [ "0x01ffc9a7" ] # IERC165
+          - args: ["0x01ffc9a7"] # IERC165
             result: true
     tokenBridge:
       name: L1LidoTokensBridge
@@ -87,7 +87,7 @@ l1:
         TOKEN_RATE_DECIMALS: 27
         getContractVersion: 2
         supportsInterface:
-          - args: [ "0x01ffc9a7" ] # IERC165
+          - args: ["0x01ffc9a7"] # IERC165
             result: true
         hasRole: null
         getRoleAdmin: null
@@ -155,7 +155,7 @@ l2:
         isLikelyOutdated: null
         isTokenRateUpdatesPaused: false
         supportsInterface:
-          - args: [ "0x01ffc9a7" ] # IERC165
+          - args: ["0x01ffc9a7"] # IERC165
             result: true
         hasRole:
           - args: [*DEFAULT_ADMIN_ROLE, "0x0000000000000000000000000000000000000000"]
@@ -249,7 +249,7 @@ l2:
         WITHDRAWALS_ENABLER_ROLE: *WITHDRAWALS_ENABLER_ROLE
         getContractVersion: 2
         supportsInterface:
-          - args: [ "0x01ffc9a7" ] # IERC165
+          - args: ["0x01ffc9a7"] # IERC165
             result: true
         getRoleAdmin: null
         hasRole:

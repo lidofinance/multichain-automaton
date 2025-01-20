@@ -44,7 +44,7 @@ deployParameters:
       ovmGuiardian: "0x0000000000000000000000000000000000000000"
     tokenRateOracle:
       l2Messenger: *l2CrossDomainMessenger
-      tokenRateOutdatedDelay: 93600  # 26 hours
+      tokenRateOutdatedDelay: 93600 # 26 hours
       maxAllowedL2ToL1ClockLag: 86400
       maxAllowedTokenRateDeviationPerDayBp: 500
       oldestRateAllowedInPauseTimeSpan: 86400

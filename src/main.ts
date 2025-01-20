@@ -38,13 +38,14 @@ async function main() {
   console.log(`  - onlyForkDeploy: ${!!onlyForkDeploy}`);
   console.log(`  - showLogs: ${!!showLogs}`);
 
-  const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig, mainConfigDoc: YAML.Document } = loadYamlConfig(configPath);
+  const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig; mainConfigDoc: YAML.Document } =
+    loadYamlConfig(configPath);
 
   const context: Context = {
     mainConfig: mainConfig,
     mainConfigDoc: mainConfigDoc,
     deploymentConfig: mainConfig["deployParameters"],
-    testingConfig: mainConfig["testingParameters"]
+    testingConfig: mainConfig["testingParameters"],
   };
 
   const progress = new ProgressBar(showLogs);
@@ -53,19 +54,19 @@ async function main() {
   progress.start(steps.length);
 
   for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
-      const { name, action } = steps[stepIdx];
-      progress.update(stepIdx, name);
-      logStream.write(`[${new Date().toISOString()}] ${name}`);
-      await action(context, (message, logType) => {
-        if (showLogs) {
-          logToStream(process.stdout, message, logType);
-        } else {
-          if (logType === LogType.Level1) {
-            progress.update(stepIdx, message);
-          }
+    const { name, action } = steps[stepIdx];
+    progress.update(stepIdx, name);
+    logStream.write(`[${new Date().toISOString()}] ${name}`);
+    await action(context, (message, logType) => {
+      if (showLogs) {
+        logToStream(process.stdout, message, logType);
+      } else {
+        if (logType === LogType.Level1) {
+          progress.update(stepIdx, message);
         }
-        logToStream(logStream, message, logType);
-      });
+      }
+      logToStream(logStream, message, logType);
+    });
   }
   progress.complete();
   logStream.end();
@@ -88,6 +89,6 @@ function loadYamlConfig(stateFile: string): {
 
   return {
     mainConfig: YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true }),
-    mainConfigDoc: YAML.parseDocument(configContent, { intAsBigInt: true })
+    mainConfigDoc: YAML.parseDocument(configContent, { intAsBigInt: true }),
   };
 }

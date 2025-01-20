@@ -24,7 +24,10 @@ export async function runCommand({
   delayBetweenRetries?: number;
   logCallback: LogCallback;
 }) {
-  logCallback(`Run command in ${workingDirectory}: ${command} ${args.join(" ")} (try ${tryNumber} of ${maxTries})`, LogType.Level1);
+  logCallback(
+    `Run command in ${workingDirectory}: ${command} ${args.join(" ")} (try ${tryNumber} of ${maxTries})`,
+    LogType.Level1,
+  );
 
   return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
@@ -53,11 +56,12 @@ export async function runCommand({
         logCallback(`Command failed with exit code ${code}.`, LogType.Level1);
 
         if (tryNumber < maxTries) {
-          logCallback(`Retrying command (${tryNumber + 1} of ${maxTries}) after ${delayBetweenRetries}ms...`, LogType.Level1);
-
-          await new Promise((resolveRetry) =>
-            setTimeout(resolveRetry, delayBetweenRetries)
+          logCallback(
+            `Retrying command (${tryNumber + 1} of ${maxTries}) after ${delayBetweenRetries}ms...`,
+            LogType.Level1,
           );
+
+          await new Promise((resolveRetry) => setTimeout(resolveRetry, delayBetweenRetries));
 
           try {
             await runCommand({
@@ -69,7 +73,7 @@ export async function runCommand({
               tryNumber: tryNumber + 1,
               maxTries,
               delayBetweenRetries,
-              logCallback
+              logCallback,
             });
             resolve();
           } catch (retryError) {

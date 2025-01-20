@@ -1,9 +1,7 @@
 function getString(variableName: string, defaultValue?: string) {
   const value = process.env[variableName];
   if (value === undefined && defaultValue === undefined) {
-    throw new Error(
-      `ENV variable ${variableName} is not set and default value wasn't provided`
-    );
+    throw new Error(`ENV variable ${variableName} is not set and default value wasn't provided`);
   }
   return (value || defaultValue) as string;
 }
@@ -15,9 +13,7 @@ function getNumber(variableName: string, defaultValue?: string) {
 function getUrlString(variableName: string, defaultValue?: string) {
   const url = getString(variableName, defaultValue);
   if (!isValidUrl(url)) {
-    throw new Error(
-      `ENV variable ${variableName} contains invalid url`
-    );
+    throw new Error(`ENV variable ${variableName} contains invalid url`);
   }
   return url;
 }
@@ -35,5 +31,5 @@ function isValidUrl(envValue: string) {
 export default {
   string: getString,
   number: getNumber,
-  url: getUrlString
+  url: getUrlString,
 };

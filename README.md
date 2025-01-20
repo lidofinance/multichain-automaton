@@ -35,10 +35,12 @@ This command installs all necessary dependencies for the automaton and its submo
 ## Usage
 
 ### Prerequisites
-   - deployer must have ETH on both networks.
-   - config setup with EM brakes.
+
+- deployer must have ETH on both networks.
+- config setup with EM brakes.
 
 ### Config Setup
+
 Create config file using existing one for unichain (`./configs/unichain_sepolia.yaml`) as an example.
 
 ### Environment Setup
@@ -77,15 +79,20 @@ docker run --env-file .env --rm \
 ```
 
 ### Logs
+
 - `main.log` - Main script execution logs
+
 #### Fork Deployment
+
 - `deployment_fork_result.json` - Deployment results for forked networks
 - `l1_fork_deployment_node.log` - L1 network fork deployment node logs
 - `l2_fork_deployment_node.log` - L2 network fork deployment node logs
 - `l1_fork_deployment_args.json` - L1 forked network deployment arguments
 - `l2_fork_deployment_args.json` - L2 forked network deployment arguments
 - `l2_fork_gov_executor_deployment_args.json` - L2 forked network gov executor deployment arguments
+
 #### Live Deployment
+
 - `deployment_live_result.json` - Deployment results for live networks
 - `l1_live_deployment_node.log` - L1 network after live deployment node logs
 - `l2_live_deployment_node.log` - L2 network after live deployment node logs
