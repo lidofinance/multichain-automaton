@@ -78,6 +78,15 @@ docker run --env-file .env --rm \
   <build_name> ./path/to/config.yaml
 ```
 
+Or you can pull and run the Docker image that builds each time a tagged branch is pushed.
+
+```bash
+docker run -t --env-file .env --rm \
+  -v $(pwd)/configs:/app/configs \
+  -v $(pwd)/artifacts:/app/artifacts \
+  ghcr.io/lidofinance/automaton:<tag_name> ./path/to/config.yaml
+```
+
 ### Logs
 
 - `main.log` - Main script execution logs
