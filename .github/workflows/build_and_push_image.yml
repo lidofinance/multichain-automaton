@@ -33,6 +33,6 @@ jobs:
         uses: docker/build-push-action@v6.1.0
         with:
           context: .
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ghcr.io/lidofinance/automaton:${{ github.ref_name }}
