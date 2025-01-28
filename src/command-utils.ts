@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 
 import { LogCallback, LogType } from "./log-utils";
 
-export async function runCommand({
+async function runCommand({
   command,
   args = [],
   workingDirectory = process.cwd(),
@@ -91,4 +91,8 @@ export async function runCommand({
       }
     });
   });
+}
+
+export {
+    runCommand
 }

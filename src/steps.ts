@@ -6,45 +6,41 @@ import { JsonRpcProvider } from "ethers";
 import { once } from "stream";
 import * as YAML from "yaml";
 
-import { DeployParameters, MainConfig, TestingParameters } from "./config";
+import { checkAddressesContractStatus } from "./block-explorer";
 import {
   burnL2DeployerNonces,
-  configFromArtifacts,
-  copyArtifacts,
+  copyAndMergeArtifacts,
+  copyDeploymentArtifacts,
   populateDeployScriptEnvs,
   runDeployScript,
 } from "./deploy-all-contracts";
 import {
-  addGovExecutorToDeploymentArtifacts,
   deployGovExecutor,
   saveGovExecutorDeploymentArgs,
+  saveGovExecutorToDeploymentArtifacts,
 } from "./deploy-gov-executor";
+import { loadDeploymentArtifacts } from "./deployment-artifacts";
 import { runDiffyscanScript, setupDiffyscan } from "./diffyscan";
 import env from "./env";
 import { runIntegrationTestsScript, setupIntegrationTests } from "./integration-tests";
 import { LogCallback, LogType } from "./log-utils";
+import { DeployParameters, MainConfig, TestingParameters } from "./main-config";
 import { diffyscanRpcUrl, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, NetworkType } from "./rpc-utils";
 import { runStateMateScript, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
-import { runVerificationScript, setupGovExecutorVerification, waitForBlockFinalization } from "./verification";
+import { runVerificationScript, setupGovExecutorVerification } from "./verification";
 
 const NUM_L1_DEPLOYED_CONTRACTS = 10;
 
-export interface Context {
+interface Context {
   l1ForkNode?: { process: child_process.ChildProcess; rpcUrl: string };
   l2ForkNode?: { process: child_process.ChildProcess; rpcUrl: string };
-  mainConfig: MainConfig;
-  mainConfigDoc: YAML.Document;
-  deploymentConfig: DeployParameters;
-  testingConfig: TestingParameters;
-  govBridgeExecutorAddressOnFork?: string;
-  govBridgeExecutor?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  deployedContracts?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  deployedContractsOnRealNetwork?: any;
+  readonly mainConfig: MainConfig;
+  readonly mainConfigDoc: YAML.Document;
+  readonly deploymentConfig: DeployParameters;
+  readonly testingConfig: TestingParameters;
 }
 
-export interface Step {
+interface Step {
   name: string;
   action: (context: Context, logCallback: LogCallback) => Promise<void> | void;
 }
@@ -82,36 +78,46 @@ const deployAndTestOnForksSteps: Step[] = [
   {
     name: "Deploy Governance Executor",
     action: async (ctx, logCallback) => {
-      ctx.govBridgeExecutorAddressOnFork = await deployGovExecutor(
+      const govBridgeExecutor = await deployGovExecutor(
         ctx.deploymentConfig,
         l2RpcUrl(NetworkType.Forked),
         logCallback,
       );
-      saveGovExecutorDeploymentArgs(
-        ctx.govBridgeExecutorAddressOnFork,
-        ctx.deploymentConfig,
-        "l2_fork_gov_executor_deployment_args.json",
-      );
+      saveGovExecutorDeploymentArgs({
+        contractAddress: govBridgeExecutor,
+        deploymentConfig: ctx.deploymentConfig,
+        fileName: "l2_fork_gov_executor_deployment_args.json",
+      });
+      saveGovExecutorToDeploymentArtifacts({
+        govBridgeExecutor,
+        deploymentResultsFilename: "deployment_fork_result.json",
+      });
     },
   },
   {
     name: "Run Deploy Script",
     action: async (ctx, logCallback) => {
-      if (ctx.govBridgeExecutorAddressOnFork === undefined) {
-        throw Error("Gov executor wasn't deployed");
-      }
-      populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutorAddressOnFork, NetworkType.Forked);
+      populateDeployScriptEnvs({
+        deploymentConfig: ctx.deploymentConfig,
+        deploymentResultsFilename: "deployment_fork_result.json",
+        networkType: NetworkType.Forked
+      });
       await runDeployScript({
         scriptPath: "./scripts/optimism/deploy-bridge-without-notifier.ts",
         logCallback: logCallback,
       });
-      copyArtifacts({
-        deploymentResult: "deployment_fork_result.json",
-        l1DeploymentArgs: "l1_fork_deployment_args.json",
-        l2DeploymentArgs: "l2_fork_deployment_args.json",
+      copyAndMergeArtifacts({
+        originalDeploymentFileName: "deployResult.json",
+        deploymentResultFileName: "deployment_fork_result.json",
       });
-      addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutorAddressOnFork, "deployment_fork_result.json");
-      ctx.deployedContracts = configFromArtifacts("deployment_fork_result.json");
+      copyDeploymentArtifacts({
+        originalDeploymentFileName: "l1DeployArgs.json",
+        deployResultFileName: "l1_fork_deployment_args.json",
+      });
+      copyDeploymentArtifacts({
+        originalDeploymentFileName: "l2DeployArgs.json",
+        deployResultFileName: "l2_fork_deployment_args.json",
+      });
     },
   },
   {
@@ -121,7 +127,7 @@ const deployAndTestOnForksSteps: Step[] = [
       setupStateMateConfig({
         seedConfigName: "state-mate-template.yaml",
         newConfigName: "state-mate-fork.yaml",
-        newContractsCfg: ctx.deployedContracts,
+        deploymentResultsFilename: "deployment_fork_result.json",
         mainConfig: ctx.mainConfig,
         mainConfigDoc: ctx.mainConfigDoc,
         l2ChainId: env.number("L2_CHAIN_ID"),
@@ -132,10 +138,10 @@ const deployAndTestOnForksSteps: Step[] = [
   {
     name: "Run Integration Tests",
     action: async (ctx, logCallback) => {
-      if (ctx.govBridgeExecutorAddressOnFork === undefined) {
-        throw Error("Gov executor wasn't deployed");
-      }
-      setupIntegrationTests(ctx.testingConfig, ctx.govBridgeExecutorAddressOnFork, ctx.deployedContracts);
+      setupIntegrationTests({
+        testingParameters: ctx.testingConfig,
+        deploymentResultsFilename: "deployment_fork_result.json"
+      });
       await runIntegrationTestsScript({
         testName: "bridging-non-rebasable.integration.test.ts",
         logCallback: logCallback,
@@ -165,12 +171,20 @@ const deployAndVerifyOnRealNetworkSteps: Step[] = [
   {
     name: "Deploy Governance Executor",
     action: async (ctx, logCallback) => {
-      ctx.govBridgeExecutor = await deployGovExecutor(ctx.deploymentConfig, l2RpcUrl(NetworkType.Live), logCallback);
-      saveGovExecutorDeploymentArgs(
-        ctx.govBridgeExecutor,
+      const govBridgeExecutor = await deployGovExecutor(
         ctx.deploymentConfig,
-        "l2_live_gov_executor_deployment_args.json",
+        l2RpcUrl(NetworkType.Live),
+        logCallback,
       );
+      saveGovExecutorDeploymentArgs({
+        contractAddress: govBridgeExecutor,
+        deploymentConfig: ctx.deploymentConfig,
+        fileName: "l2_live_gov_executor_deployment_args.json",
+      });
+      saveGovExecutorToDeploymentArtifacts({
+        govBridgeExecutor,
+        deploymentResultsFilename: "deployment_live_result.json",
+      });
     },
   },
   {
@@ -181,34 +195,56 @@ const deployAndVerifyOnRealNetworkSteps: Step[] = [
   {
     name: "Run Deploy Script",
     action: async (ctx, logCallback) => {
-      if (ctx.govBridgeExecutor === undefined) {
-        throw Error("Gov executor wasn't deployed");
-      }
-      populateDeployScriptEnvs(ctx.deploymentConfig, ctx.govBridgeExecutor, NetworkType.Live);
+      populateDeployScriptEnvs({
+        deploymentConfig: ctx.deploymentConfig,
+        deploymentResultsFilename: "deployment_live_result.json",
+        networkType: NetworkType.Live
+      });
       await runDeployScript({
         scriptPath: "./scripts/optimism/deploy-bridge-without-notifier.ts",
         logCallback: logCallback,
       });
-      copyArtifacts({
-        deploymentResult: "deployment_live_result.json",
-        l1DeploymentArgs: "l1_live_deployment_args.json",
-        l2DeploymentArgs: "l2_live_deployment_args.json",
+      copyAndMergeArtifacts({
+        originalDeploymentFileName: "deployResult.json",
+        deploymentResultFileName: "deployment_live_result.json",
       });
-      addGovExecutorToDeploymentArtifacts(ctx.govBridgeExecutor, "deployment_live_result.json");
+      copyDeploymentArtifacts({
+        originalDeploymentFileName: "l1DeployArgs.json",
+        deployResultFileName: "l1_live_deployment_args.json",
+      });
+      copyDeploymentArtifacts({
+        originalDeploymentFileName: "l2DeployArgs.json",
+        deployResultFileName: "l2_live_deployment_args.json",
+      });
     },
   },
   {
-    name: "Wait for Finalization",
+    name: "Wait for block explorer for address become contract",
     action: async (_, logCallback) => {
-      const deployResult = configFromArtifacts("deployment_live_result.json");
-
-      const l1LastBlockNumber = deployResult["ethereum"]["lastBlockNumber"];
-      const l1Provider = new JsonRpcProvider(l1RpcUrl(NetworkType.Live));
-      await waitForBlockFinalization(l1Provider, l1LastBlockNumber, logCallback);
-
-      const l2Provider = new JsonRpcProvider(l2RpcUrl(NetworkType.Live));
-      const l2LastBlockNumber = deployResult["optimism"]["lastBlockNumber"];
-      await waitForBlockFinalization(l2Provider, l2LastBlockNumber, logCallback);
+      await checkAddressesContractStatus({
+        configWihAddresses: "l1_live_deployment_args.json",
+        endpoint: `https://${env.string("L1_BLOCK_EXPLORER_API_HOST")}/api`,
+        apiKey: env.string("L1_EXPLORER_TOKEN"),
+        maxTries: 3,
+        checkInterval: 1000,
+        logCallback: logCallback
+      });
+      await checkAddressesContractStatus({
+        configWihAddresses: "l2_live_deployment_args.json",
+        endpoint: `https://${env.string("L2_BLOCK_EXPLORER_API_HOST")}/api`,
+        apiKey: env.string("L2_EXPLORER_TOKEN"),
+        maxTries: 3,
+        checkInterval: 1000,
+        logCallback: logCallback
+      });
+      await checkAddressesContractStatus({
+        configWihAddresses: "l2_live_gov_executor_deployment_args.json",
+        endpoint: `https://${env.string("L2_BLOCK_EXPLORER_API_HOST")}/api`,
+        apiKey: env.string("L2_EXPLORER_TOKEN"),
+        maxTries: 3,
+        checkInterval: 1000,
+        logCallback: logCallback
+      });
     },
   },
   {
@@ -244,12 +280,11 @@ const testDeployedOnRealNetworkSteps: Step[] = [
   {
     name: "State-mate",
     action: async (ctx, logCallback) => {
-      ctx.deployedContractsOnRealNetwork = configFromArtifacts("deployment_live_result.json");
       setupStateMateEnvs(l1RpcUrl(NetworkType.Live), l2RpcUrl(NetworkType.Live));
       setupStateMateConfig({
         seedConfigName: "state-mate-template.yaml",
         newConfigName: "state-mate-live.yaml",
-        newContractsCfg: ctx.deployedContractsOnRealNetwork,
+        deploymentResultsFilename: "deployment_live_result.json",
         mainConfig: ctx.mainConfig,
         mainConfigDoc: ctx.mainConfigDoc,
         l2ChainId: env.number("L2_CHAIN_ID"),
@@ -260,28 +295,26 @@ const testDeployedOnRealNetworkSteps: Step[] = [
   {
     name: "Diffyscan",
     action: async (ctx, logCallback) => {
-      setupDiffyscan(
-        ctx.deployedContractsOnRealNetwork,
-        ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
-        ctx.deploymentConfig,
-        l1RpcUrl(NetworkType.Live),
-        diffyscanRpcUrl(),
-        env.string("L1_CHAIN_ID"),
-      );
+      setupDiffyscan({
+        deploymentResultsFilename: "deployment_live_result.json",
+        deploymentConfig: ctx.deploymentConfig,
+        remoteRpcUrl: l1RpcUrl(NetworkType.Live),
+        localRpcUrl: diffyscanRpcUrl(),
+        chainID: env.string("L1_CHAIN_ID"),
+      });
       await runDiffyscanScript({
         config: "diffyscan_config_L1.json",
         withBinaryComparison: true,
         logCallback: logCallback,
       });
 
-      setupDiffyscan(
-        ctx.deployedContractsOnRealNetwork,
-        ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
-        ctx.deploymentConfig,
-        l2RpcUrl(NetworkType.Live),
-        diffyscanRpcUrl(),
-        env.string("L2_CHAIN_ID"),
-      );
+      setupDiffyscan({
+        deploymentResultsFilename: "deployment_live_result.json",
+        deploymentConfig: ctx.deploymentConfig,
+        remoteRpcUrl: l2RpcUrl(NetworkType.Live),
+        localRpcUrl: diffyscanRpcUrl(),
+        chainID: env.string("L2_CHAIN_ID"),
+      });
       await runDiffyscanScript({
         config: "diffyscan_config_L2_gov.json",
         withBinaryComparison: true,
@@ -297,12 +330,17 @@ const testDeployedOnRealNetworkSteps: Step[] = [
   {
     name: "Integration tests",
     action: async (ctx, logCallback) => {
+      const deployedContractsOnRealNetwork = loadDeploymentArtifacts({fileName: "deployment_live_result.json"});
+      const l1LastBlockNumber = deployedContractsOnRealNetwork.l1.lastBlockNumber;
+      const l2LastBlockNumber = deployedContractsOnRealNetwork.l2.lastBlockNumber;
+
       const l1ForkNode = await spawnNode(
         l1RpcUrl(NetworkType.Live),
         env.number("L1_CHAIN_ID"),
         localL1RpcPort(),
         "l1_live_deployment_node.log",
         logCallback,
+        l1LastBlockNumber
       );
       const l2ForkNode = await spawnNode(
         l2RpcUrl(NetworkType.Live),
@@ -310,18 +348,18 @@ const testDeployedOnRealNetworkSteps: Step[] = [
         localL2RpcPort(),
         "l2_live_deployment_node.log",
         logCallback,
+        l2LastBlockNumber
       );
 
-      populateDeployScriptEnvs(
-        ctx.deploymentConfig,
-        ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
-        NetworkType.Live,
-      );
-      setupIntegrationTests(
-        ctx.testingConfig,
-        ctx.deployedContractsOnRealNetwork["optimism"]["govBridgeExecutor"],
-        ctx.deployedContractsOnRealNetwork,
-      );
+      populateDeployScriptEnvs({
+        deploymentConfig: ctx.deploymentConfig,
+        deploymentResultsFilename: "deployment_live_result.json",
+        networkType: NetworkType.Live,
+      });
+      setupIntegrationTests({
+        testingParameters: ctx.testingConfig,
+        deploymentResultsFilename: "deployment_live_result.json",
+      });
       await runIntegrationTestsScript({
         testName: "bridging-non-rebasable.integration.test.ts",
         logCallback: logCallback,
@@ -339,7 +377,7 @@ const testDeployedOnRealNetworkSteps: Step[] = [
   },
 ];
 
-export function getSteps(onlyForkDeploy: boolean, onlyCheck: boolean) {
+function getSteps(onlyForkDeploy: boolean, onlyCheck: boolean) {
   if (onlyForkDeploy) {
     return deployAndTestOnForksSteps;
   }
@@ -355,9 +393,14 @@ async function spawnNode(
   port: number,
   outputFileName: string,
   logCallback: LogCallback,
+  forkBlock?: number,
 ): Promise<{ process: child_process.ChildProcess; rpcUrl: string }> {
   const nodeCmd = "anvil";
   const nodeArgs = ["--fork-url", `${rpcForkUrl}`, "-p", `${port}`, "--no-storage-caching", "--chain-id", `${chainId}`];
+  if (forkBlock !== undefined) {
+    nodeArgs.push("--fork-block-number", `${forkBlock}`);
+  }
+  console.log("nodeArgs=",nodeArgs);
 
   const output = createWriteStream(`./artifacts/${outputFileName}`);
   await once(output, "open");
@@ -388,4 +431,10 @@ async function spawnNode(
 
   logCallback(`Spawned test node: ${nodeCmd} ${nodeArgs.join(" ")}`, LogType.Level1);
   return { process: processInstance, rpcUrl: rpcForkUrl };
+}
+
+export {
+  Context,
+  Step,
+  getSteps
 }

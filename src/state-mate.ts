@@ -6,10 +6,11 @@ import { ethers } from "ethers";
 import * as YAML from "yaml";
 
 import { runCommand } from "./command-utils";
-import { MainConfig } from "./config";
+import { loadDeploymentArtifacts } from "./deployment-artifacts";
 import { LogCallback } from "./log-utils";
+import { MainConfig } from "./main-config";
 
-export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
+function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: string) {
   dotenv.populate(
     process.env as { [key: string]: string },
     {
@@ -22,18 +23,17 @@ export function setupStateMateEnvs(ethereumRpcUrl: string, optimismRpcUrl: strin
   );
 }
 
-export function setupStateMateConfig({
+function setupStateMateConfig({
   seedConfigName,
   newConfigName,
-  newContractsCfg,
+  deploymentResultsFilename,
   mainConfig,
   mainConfigDoc,
   l2ChainId,
 }: {
   seedConfigName: string;
   newConfigName: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  newContractsCfg: any;
+  deploymentResultsFilename: string;
   mainConfig: MainConfig;
   mainConfigDoc: YAML.Document;
   l2ChainId: number;
@@ -41,6 +41,8 @@ export function setupStateMateConfig({
   function item(anchor: string, sectionEntries: [YAML.Scalar]): YAML.Scalar {
     return sectionEntries.find((addr) => addr.anchor == anchor) as YAML.Scalar;
   }
+
+  const deployedContracts = loadDeploymentArtifacts({fileName: deploymentResultsFilename});
 
   const seedConfigPath = `./configs/${seedConfigName}`;
   const seedDoc = YAML.parseDocument(fs.readFileSync(seedConfigPath, "utf-8"), { intAsBigInt: true });
@@ -83,22 +85,21 @@ export function setupStateMateConfig({
 
   const l1DeployedSection = deployedSection.get("l1") as YAML.YAMLSeq;
   const l1SectionEntries = l1DeployedSection.items as [YAML.Scalar];
-  item("l1TokenBridge", l1SectionEntries).value = newContractsCfg["ethereum"]["bridgeProxyAddress"];
-  item("l1TokenBridgeImpl", l1SectionEntries).value = newContractsCfg["ethereum"]["bridgeImplAddress"];
-  item("l1OpStackTokenRatePusher", l1SectionEntries).value =
-    newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"];
+  item("l1TokenBridge", l1SectionEntries).value = deployedContracts.l1.bridgeProxyAddress;
+  item("l1TokenBridgeImpl", l1SectionEntries).value = deployedContracts.l1.bridgeImplAddress;
+  item("l1OpStackTokenRatePusher", l1SectionEntries).value = deployedContracts.l1.opStackTokenRatePusherImplAddress;
 
   const l2DeployedSection = deployedSection.get("l2") as YAML.YAMLSeq;
   const l2SectionEntries = l2DeployedSection.items as [YAML.Scalar];
-  item("l2GovernanceExecutor", l2SectionEntries).value = newContractsCfg["optimism"]["govBridgeExecutor"];
-  item("l2TokenBridge", l2SectionEntries).value = newContractsCfg["optimism"]["tokenBridgeProxyAddress"];
-  item("l2TokenBridgeImpl", l2SectionEntries).value = newContractsCfg["optimism"]["tokenBridgeImplAddress"];
-  item("l2WstETH", l2SectionEntries).value = newContractsCfg["optimism"]["tokenProxyAddress"];
-  item("l2WstETHImpl", l2SectionEntries).value = newContractsCfg["optimism"]["tokenImplAddress"];
-  item("l2StETH", l2SectionEntries).value = newContractsCfg["optimism"]["tokenRebasableProxyAddress"];
-  item("l2StETHImpl", l2SectionEntries).value = newContractsCfg["optimism"]["tokenRebasableImplAddress"];
-  item("l2TokenRateOracle", l2SectionEntries).value = newContractsCfg["optimism"]["tokenRateOracleProxyAddress"];
-  item("l2TokenRateOracleImpl", l2SectionEntries).value = newContractsCfg["optimism"]["tokenRateOracleImplAddress"];
+  item("l2GovernanceExecutor", l2SectionEntries).value = deployedContracts.l2.govBridgeExecutor;
+  item("l2TokenBridge", l2SectionEntries).value = deployedContracts.l2.tokenBridgeProxyAddress;
+  item("l2TokenBridgeImpl", l2SectionEntries).value = deployedContracts.l2.tokenBridgeImplAddress;
+  item("l2WstETH", l2SectionEntries).value = deployedContracts.l2.tokenProxyAddress;
+  item("l2WstETHImpl", l2SectionEntries).value = deployedContracts.l2.tokenImplAddress;
+  item("l2StETH", l2SectionEntries).value = deployedContracts.l2.tokenRebasableProxyAddress;
+  item("l2StETHImpl", l2SectionEntries).value = deployedContracts.l2.tokenRebasableImplAddress;
+  item("l2TokenRateOracle", l2SectionEntries).value = deployedContracts.l2.tokenRateOracleProxyAddress;
+  item("l2TokenRateOracleImpl", l2SectionEntries).value = deployedContracts.l2.tokenRateOracleImplAddress;
 
   // L1 -----------------------------------------
   const l1Section = doc.get("l1") as YAML.YAMLMap;
@@ -146,7 +147,7 @@ export function setupStateMateConfig({
   l2WstETHChecks.set("getContractVersion", Number(l2WstETHConfig["signingDomainVersion"]));
   setDomainSeparatorAndEIP712Domain(
     "wstETH",
-    newContractsCfg["optimism"]["tokenProxyAddress"],
+    deployedContracts.l2.tokenProxyAddress,
     l2WstETHConfig.signingDomainVersion,
   );
 
@@ -159,7 +160,7 @@ export function setupStateMateConfig({
   l2StETHChecks.set("getContractVersion", Number(l2StETHConfig["signingDomainVersion"]));
   setDomainSeparatorAndEIP712Domain(
     "stETH",
-    newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
+    deployedContracts.l2.tokenRebasableProxyAddress,
     l2StETHConfig.signingDomainVersion,
   );
 
@@ -228,7 +229,7 @@ export function setupStateMateConfig({
   }
 }
 
-export async function runStateMateScript({
+async function runStateMateScript({
   configName,
   throwOnFail = true,
   tryNumber = 1,
@@ -251,4 +252,10 @@ export async function runStateMateScript({
     maxTries,
     logCallback: logCallback,
   });
+}
+
+export {
+    setupStateMateEnvs,
+    setupStateMateConfig,
+    runStateMateScript
 }

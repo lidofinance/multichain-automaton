@@ -1,6 +1,6 @@
 import cliProgress from "cli-progress";
 
-export class ProgressBar {
+class ProgressBar {
   private bar: cliProgress.SingleBar | null = null;
 
   constructor(showLogs: boolean) {
@@ -28,4 +28,8 @@ export class ProgressBar {
   complete(message: string = "All steps completed!") {
     this.bar?.update(this.bar.getTotal(), { stepName: message });
   }
+}
+
+export {
+    ProgressBar
 }

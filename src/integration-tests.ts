@@ -1,16 +1,20 @@
 import dotenv from "dotenv";
 
 import { runCommand } from "./command-utils";
-import { TestingParameters } from "./config";
+import { loadDeploymentArtifacts } from "./deployment-artifacts";
 import { LogCallback } from "./log-utils";
-
+import { TestingParameters } from "./main-config";
  
-export function setupIntegrationTests(
-  testingParameters: TestingParameters,
-  govBridgeExecutor: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  newContractsCfg: any,
+function setupIntegrationTests(
+  {
+    testingParameters,
+    deploymentResultsFilename
+  } : {
+    testingParameters: TestingParameters,
+    deploymentResultsFilename: string
+  }
 ) {
+  const deployedContracts = loadDeploymentArtifacts({fileName: deploymentResultsFilename});
   dotenv.populate(process.env as { [key: string]: string }, {
     TESTING_USE_DEPLOYED_CONTRACTS: "true",
     TESTING_OPT_L1_LIDO: testingParameters.lido,
@@ -18,18 +22,19 @@ export function setupIntegrationTests(
     TESTING_OPT_L1_NON_REBASABLE_TOKEN: testingParameters.l1NonRebasableToken,
     TESTING_OPT_L1_ACCOUNTING_ORACLE: testingParameters.accountingOracle,
     TESTING_L1_TOKENS_HOLDER: testingParameters.l1TokensHolder,
-    TESTING_OPT_GOV_BRIDGE_EXECUTOR: govBridgeExecutor,
-    TESTING_OPT_L1_ERC20_TOKEN_BRIDGE: newContractsCfg["ethereum"]["bridgeProxyAddress"],
+    TESTING_OPT_GOV_BRIDGE_EXECUTOR: deployedContracts.l2.govBridgeExecutor,
+    TESTING_OPT_L1_ERC20_TOKEN_BRIDGE: deployedContracts.l1.bridgeProxyAddress,
     TESTING_OPT_L1_TOKEN_RATE_NOTIFIER: testingParameters.tokenRateNotifier,
-    TESTING_OPT_L1_OP_STACK_TOKEN_RATE_PUSHER: newContractsCfg["ethereum"]["opStackTokenRatePusherImplAddress"],
-    TESTING_OPT_L2_TOKEN_RATE_ORACLE: newContractsCfg["optimism"]["tokenRateOracleProxyAddress"],
-    TESTING_OPT_L2_NON_REBASABLE_TOKEN: newContractsCfg["optimism"]["tokenProxyAddress"],
-    TESTING_OPT_L2_REBASABLE_TOKEN: newContractsCfg["optimism"]["tokenRebasableProxyAddress"],
-    TESTING_OPT_L2_ERC20_TOKEN_BRIDGE: newContractsCfg["optimism"]["tokenBridgeProxyAddress"],
-  });
+    TESTING_OPT_L1_OP_STACK_TOKEN_RATE_PUSHER: deployedContracts.l1.opStackTokenRatePusherImplAddress,
+    TESTING_OPT_L2_TOKEN_RATE_ORACLE: deployedContracts.l2.tokenRateOracleProxyAddress,
+    TESTING_OPT_L2_NON_REBASABLE_TOKEN: deployedContracts.l2.tokenProxyAddress,
+    TESTING_OPT_L2_REBASABLE_TOKEN: deployedContracts.l2.tokenRebasableProxyAddress,
+    TESTING_OPT_L2_ERC20_TOKEN_BRIDGE: deployedContracts.l2.tokenBridgeProxyAddress,
+  }, { override: true });
+  console.log("process.env=", process.env);
 }
 
-export async function runIntegrationTestsScript({
+async function runIntegrationTestsScript({
   testName,
   throwOnFail = true,
   tryNumber = 1,
@@ -52,4 +57,9 @@ export async function runIntegrationTestsScript({
     maxTries,
     logCallback: logCallback,
   });
+}
+
+export {
+    runIntegrationTestsScript,
+    setupIntegrationTests
 }
