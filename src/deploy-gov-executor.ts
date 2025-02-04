@@ -2,9 +2,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 import { ethers } from "ethers";
 
-import { DeployParameters, GovBridgeExecutor } from "./config";
+import { loadDeploymentArtifacts, saveDeployArtifacts } from "./deployment-artifacts";
 import env from "./env";
 import { LogCallback, LogType } from "./log-utils";
+import { DeployParameters, GovBridgeExecutor } from "./main-config";
 
 const GOV_BRIDGE_EXECUTOR_PATH =
   "./governance-crosschain-bridges/artifacts/contracts/bridges/OptimismBridgeExecutor.sol/OptimismBridgeExecutor.json";
@@ -20,7 +21,7 @@ type ConstructorArgs = [
   string, // ovmGuiardian
 ];
 
-export async function deployGovExecutor(deploymentConfig: DeployParameters, rpcUrl: string, logCallback: LogCallback) {
+async function deployGovExecutor(deploymentConfig: DeployParameters, rpcUrl: string, logCallback: LogCallback) {
   const contractJson = JSON.parse(readFileSync(GOV_BRIDGE_EXECUTOR_PATH, "utf-8"));
   const { abi, bytecode } = contractJson;
   const provider = new ethers.JsonRpcProvider(rpcUrl);
@@ -68,13 +69,16 @@ async function deploy(
   }
 }
 
-export function saveGovExecutorDeploymentArgs(
-  contractAddress: string,
-  deploymentConfig: DeployParameters,
-  fileName: string,
-) {
+function saveGovExecutorDeploymentArgs({
+  contractAddress,
+  deploymentConfig,
+  fileName,
+}: {
+  contractAddress: string;
+  deploymentConfig: DeployParameters;
+  fileName: string;
+}) {
   const govBridgeExecutorConfig = deploymentConfig.l2.govBridgeExecutor;
-
   const content = {
     [contractAddress]: [
       govBridgeExecutorConfig.ovmL2Messenger,
@@ -86,21 +90,23 @@ export function saveGovExecutorDeploymentArgs(
       govBridgeExecutorConfig.ovmGuiardian,
     ],
   };
-  // save args
   writeFileSync(`./artifacts/${fileName}`, JSON.stringify(content, null, 2));
 }
 
-export function addGovExecutorToDeploymentArtifacts(govBridgeExecutor: string, deploymentResultsFilename: string) {
-  const newContractsConfig = configFromArtifacts(deploymentResultsFilename);
-  newContractsConfig["optimism"]["govBridgeExecutor"] = govBridgeExecutor;
-  writeFileSync(`./artifacts/${deploymentResultsFilename}`, JSON.stringify(newContractsConfig, null, 2));
+function saveGovExecutorToDeploymentArtifacts({
+  govBridgeExecutor,
+  deploymentResultsFilename,
+}: {
+  govBridgeExecutor: string;
+  deploymentResultsFilename: string;
+}) {
+  const deployArtifacts = loadDeploymentArtifacts({fileName: deploymentResultsFilename});
+  deployArtifacts.l2.govBridgeExecutor = govBridgeExecutor;
+  saveDeployArtifacts(deployArtifacts, deploymentResultsFilename);
 }
 
-function configFromArtifacts(fileName: string) {
-  const data = readFileSync(`./artifacts/${fileName}`, "utf8");
-  try {
-    return JSON.parse(data);
-  } catch (error) {
-    throw new Error(`can't parse deploy file ${fileName}: ${(error as Error).message}`);
-  }
+export {
+    deployGovExecutor,
+    saveGovExecutorDeploymentArgs,
+    saveGovExecutorToDeploymentArtifacts
 }

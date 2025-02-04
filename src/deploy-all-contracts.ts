@@ -1,18 +1,19 @@
-import { cpSync, readFileSync } from "node:fs";
+import { cpSync } from "node:fs";
 import process from "node:process";
 
 import dotenv from "dotenv";
 import { ethers } from "ethers";
 
 import { runCommand } from "./command-utils";
-import { DeployParameters } from "./config";
+import { DeploymentArtifacts, loadDeploymentArtifacts, saveDeployArtifacts } from "./deployment-artifacts";
 import env from "./env";
 import { LogCallback, LogType } from "./log-utils";
+import { DeployParameters } from "./main-config";
 import { NetworkType } from "./rpc-utils";
 
 const WAIT_TX_TIMEOUT = 30_000;
 
-export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number, logCallback: LogCallback) {
+async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number, logCallback: LogCallback) {
   const l2Provider = new ethers.JsonRpcProvider(l2RpcUrl);
   const l2Deployer = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, l2Provider);
   const l2DeployerAddress = await l2Deployer.getAddress();
@@ -35,12 +36,14 @@ export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number, 
           `Burning ${nonceIndex} tx, try num: ${tryNum} maxFeePerGas: ${maxFeePerGas} maxPriorityFeePerGas:${maxPriorityFeePerGas}`,
           LogType.Level1,
         );
+        const nonce = await l2Provider.getTransactionCount(l2Deployer.address);
         const tx = await waitWithTimeout(
           l2Deployer.sendTransaction({
             to: l2DeployerAddress,
             value: 0,
             maxPriorityFeePerGas: maxPriorityFeePerGas * retryGasFactor(tryNum),
             maxFeePerGas: (maxFeePerGas + maxPriorityFeePerGas) * retryGasFactor(tryNum),
+            nonce: nonce,
           }),
           WAIT_TX_TIMEOUT,
         );
@@ -68,7 +71,7 @@ export async function burnL2DeployerNonces(l2RpcUrl: string, numNonces: number, 
   }
 }
 
-export async function runDeployScript({
+async function runDeployScript({
   scriptPath,
   throwOnFail = true,
   tryNumber = 1,
@@ -94,16 +97,23 @@ export async function runDeployScript({
   });
 }
 
-export function populateDeployScriptEnvs(
+function populateDeployScriptEnvs({
+  deploymentConfig,
+  deploymentResultsFilename,
+  networkType,
+}: {
   deploymentConfig: DeployParameters,
-  govBridgeExecutor: string,
+  deploymentResultsFilename: string,
   networkType: NetworkType,
-) {
+}) {
   function formattedArray(configArray: Array<string>) {
     return `[${configArray.map((ts: string) => `"${ts.toString()}"`)}]`;
   }
   const l1Config = deploymentConfig.l1;
   const l2Config = deploymentConfig.l2;
+
+  const deployedContracts = loadDeploymentArtifacts({fileName: deploymentResultsFilename});
+  const govBridgeExecutor = deployedContracts.l2.govBridgeExecutor;
 
   dotenv.populate(
     process.env as { [key: string]: string },
@@ -182,30 +192,61 @@ export function populateDeployScriptEnvs(
   );
 }
 
-function copyDeploymentArtifacts(originalDeployFileName: string, deployResultFileName: string) {
-  const originalDeployFilePath = `./lido-l2-with-steth/${originalDeployFileName}`;
+function copyDeploymentArtifacts({
+  originalDeploymentFileName,
+  deployResultFileName,
+}: {
+  originalDeploymentFileName: string;
+  deployResultFileName: string;
+}) {
+  const originalDeployFilePath = `./lido-l2-with-steth/${originalDeploymentFileName}`;
   cpSync(originalDeployFilePath, `./artifacts/${deployResultFileName}`);
 }
 
-export function copyArtifacts({
-  deploymentResult,
-  l1DeploymentArgs,
-  l2DeploymentArgs,
+function copyAndMergeArtifacts({
+  originalDeploymentFileName,
+  deploymentResultFileName,
 }: {
-  deploymentResult: string;
-  l1DeploymentArgs: string;
-  l2DeploymentArgs: string;
+  originalDeploymentFileName: string;
+  deploymentResultFileName: string;
 }) {
-  copyDeploymentArtifacts("deployResult.json", deploymentResult);
-  copyDeploymentArtifacts("l1DeployArgs.json", l1DeploymentArgs);
-  copyDeploymentArtifacts("l2DeployArgs.json", l2DeploymentArgs);
+  const deploymentResultWithoutGovExecutor = loadDeploymentArtifacts({fileName: originalDeploymentFileName, folder: "./lido-l2-with-steth"});
+  const deploymentResult = loadDeploymentArtifacts({fileName: deploymentResultFileName});
+  const mappedDeploymentResult = mappedFromOriginalDeploymentArtifacts(deploymentResultWithoutGovExecutor);
+  mappedDeploymentResult.l2.govBridgeExecutor = deploymentResult["l2"]["govBridgeExecutor"];
+  saveDeployArtifacts(mappedDeploymentResult, deploymentResultFileName);
 }
 
-export function configFromArtifacts(fileName: string) {
-  const data = readFileSync(`./artifacts/${fileName}`, "utf8");
-  try {
-    return JSON.parse(data);
-  } catch (error) {
-    throw new Error(`can't parse deploy file ${fileName}: ${(error as Error).message}`);
-  }
+function mappedFromOriginalDeploymentArtifacts(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  originalDeploymentArtifacts: any
+): DeploymentArtifacts {
+  return {
+    l1: {
+      bridgeImplAddress: originalDeploymentArtifacts["ethereum"]["bridgeImplAddress"],
+      bridgeProxyAddress: originalDeploymentArtifacts["ethereum"]["bridgeProxyAddress"],
+      opStackTokenRatePusherImplAddress: originalDeploymentArtifacts["ethereum"]["opStackTokenRatePusherImplAddress"],
+      lastBlockNumber: originalDeploymentArtifacts["ethereum"]["lastBlockNumber"],
+    },
+    l2: {
+      govBridgeExecutor: originalDeploymentArtifacts["optimism"]["govBridgeExecutor"],
+      tokenImplAddress: originalDeploymentArtifacts["optimism"]["tokenImplAddress"],
+      tokenProxyAddress: originalDeploymentArtifacts["optimism"]["tokenProxyAddress"],
+      tokenRebasableImplAddress: originalDeploymentArtifacts["optimism"]["tokenRebasableImplAddress"],
+      tokenRebasableProxyAddress: originalDeploymentArtifacts["optimism"]["tokenRebasableProxyAddress"],
+      tokenBridgeImplAddress: originalDeploymentArtifacts["optimism"]["tokenBridgeImplAddress"],
+      tokenBridgeProxyAddress: originalDeploymentArtifacts["optimism"]["tokenBridgeProxyAddress"],
+      tokenRateOracleImplAddress: originalDeploymentArtifacts["optimism"]["tokenRateOracleImplAddress"],
+      tokenRateOracleProxyAddress: originalDeploymentArtifacts["optimism"]["tokenRateOracleProxyAddress"],
+      lastBlockNumber: originalDeploymentArtifacts["optimism"]["lastBlockNumber"],
+    },
+  };
+}
+
+export {
+  burnL2DeployerNonces,
+  runDeployScript,
+  populateDeployScriptEnvs,
+  copyDeploymentArtifacts,
+  copyAndMergeArtifacts
 }

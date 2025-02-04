@@ -6,8 +6,8 @@ import "dotenv/config";
 import { program } from "commander";
 import * as YAML from "yaml";
 
-import { MainConfig } from "./config";
 import { logToStream, LogType } from "./log-utils";
+import { MainConfig } from "./main-config";
 import { ProgressBar } from "./progress-bar";
 import { Context, getSteps } from "./steps";
 

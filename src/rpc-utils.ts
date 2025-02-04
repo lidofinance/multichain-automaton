@@ -1,27 +1,27 @@
 // RPC's url management
 
-export enum NetworkType {
+enum NetworkType {
   Live,
   Forked,
 }
 
-export function l1RpcUrl(networkType: NetworkType): string {
+function l1RpcUrl(networkType: NetworkType): string {
   return networkType == NetworkType.Forked ? getPortUrl("L1_LOCAL_RPC_PORT") : getRpcFromEnv("L1_REMOTE_RPC_URL");
 }
 
-export function l2RpcUrl(networkType: NetworkType): string {
+function l2RpcUrl(networkType: NetworkType): string {
   return networkType == NetworkType.Forked ? getPortUrl("L2_LOCAL_RPC_PORT") : getRpcFromEnv("L2_REMOTE_RPC_URL");
 }
 
-export function localL1RpcPort(): number {
+function localL1RpcPort(): number {
   return getPortNumber("L1_LOCAL_RPC_PORT");
 }
 
-export function localL2RpcPort(): number {
+function localL2RpcPort(): number {
   return getPortNumber("L2_LOCAL_RPC_PORT");
 }
 
-export function diffyscanRpcUrl(): string {
+function diffyscanRpcUrl(): string {
   return getPortUrl("DIFFYSCAN_RPC_PORT");
 }
 
@@ -61,4 +61,14 @@ function isUrl(maybeUrl: string): boolean {
   } catch (_) {
     return false;
   }
+}
+
+export {
+  NetworkType,
+  l1RpcUrl,
+  l2RpcUrl,
+  localL1RpcPort,
+  localL2RpcPort,
+  diffyscanRpcUrl,
+  isUrl
 }

@@ -8,6 +8,7 @@ parameters:
   - &l2EmergencyBreaksMultisig "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1"
   - &l1CrossDomainMessenger "0x448A37330A60494E666F6DD60aD48d930AEbA381"
   - &l2CrossDomainMessenger "0x4200000000000000000000000000000000000007"
+  - &genesisTime 1655733600
 
 statemate:
   l1CrossDomainMessenger: *l1CrossDomainMessenger
