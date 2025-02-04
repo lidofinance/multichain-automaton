@@ -257,24 +257,24 @@ const verifyOnRealNetworkSteps: Step[] = [
         configWihAddresses: "l1_live_deployment_args.json",
         endpoint: `https://${env.string("L1_BLOCK_EXPLORER_API_HOST")}/api`,
         apiKey: env.string("L1_EXPLORER_TOKEN"),
-        maxTries: 3,
-        checkInterval: 1000,
+        maxTries: 5,
+        checkInterval: 2000,
         logCallback: logCallback
       });
       await checkAddressesContractStatus({
         configWihAddresses: "l2_live_deployment_args.json",
         endpoint: `https://${env.string("L2_BLOCK_EXPLORER_API_HOST")}/api`,
         apiKey: env.string("L2_EXPLORER_TOKEN"),
-        maxTries: 3,
-        checkInterval: 1000,
+        maxTries: 5,
+        checkInterval: 2000,
         logCallback: logCallback
       });
       await checkAddressesContractStatus({
         configWihAddresses: "l2_live_gov_executor_deployment_args.json",
         endpoint: `https://${env.string("L2_BLOCK_EXPLORER_API_HOST")}/api`,
         apiKey: env.string("L2_EXPLORER_TOKEN"),
-        maxTries: 3,
-        checkInterval: 1000,
+        maxTries: 5,
+        checkInterval: 2000,
         logCallback: logCallback
       });
     },
