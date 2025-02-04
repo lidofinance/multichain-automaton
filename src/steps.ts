@@ -45,6 +45,35 @@ interface Step {
   action: (context: Context, logCallback: LogCallback) => Promise<void> | void;
 }
 
+enum DeployAction {
+  Fork = "fork",         // Deploy and test on fork
+  Deploy = "deploy",     // Deploy on real network
+  Verify = "verify",     // Run verification steps
+  Check = "check"        // Check real network deployment
+}
+
+function getSteps(actions: DeployAction[]): Step[] {
+  const steps: Step[] = [];
+  
+  if (actions.includes(DeployAction.Fork)) {
+    steps.push(...deployAndTestOnForksSteps);
+  }
+  
+  if (actions.includes(DeployAction.Deploy)) {
+    steps.push(...deployOnRealNetworkSteps);
+  }
+  
+  if (actions.includes(DeployAction.Verify)) {
+    steps.push(...verifyOnRealNetworkSteps);
+  }
+  
+  if (actions.includes(DeployAction.Check)) {
+    steps.push(...testDeployedOnRealNetworkSteps);
+  }
+  
+  return steps;
+}
+
 const deployAndTestOnForksSteps: Step[] = [
   {
     name: "Spawn L1 Fork Node",
@@ -167,7 +196,7 @@ const deployAndTestOnForksSteps: Step[] = [
   },
 ];
 
-const deployAndVerifyOnRealNetworkSteps: Step[] = [
+const deployOnRealNetworkSteps: Step[] = [
   {
     name: "Deploy Governance Executor",
     action: async (ctx, logCallback) => {
@@ -217,9 +246,12 @@ const deployAndVerifyOnRealNetworkSteps: Step[] = [
         deployResultFileName: "l2_live_deployment_args.json",
       });
     },
-  },
+  }
+];
+
+const verifyOnRealNetworkSteps: Step[] = [
   {
-    name: "Wait for block explorer for address become contract",
+    name: "Wait for Block Explorer to Confirm Address as Contract",
     action: async (_, logCallback) => {
       await checkAddressesContractStatus({
         configWihAddresses: "l1_live_deployment_args.json",
@@ -273,7 +305,7 @@ const deployAndVerifyOnRealNetworkSteps: Step[] = [
         logCallback: logCallback,
       });
     },
-  },
+  }
 ];
 
 const testDeployedOnRealNetworkSteps: Step[] = [
@@ -377,16 +409,6 @@ const testDeployedOnRealNetworkSteps: Step[] = [
   },
 ];
 
-function getSteps(onlyForkDeploy: boolean, onlyCheck: boolean) {
-  if (onlyForkDeploy) {
-    return deployAndTestOnForksSteps;
-  }
-  if (onlyCheck) {
-    return testDeployedOnRealNetworkSteps;
-  }
-  return [...deployAndTestOnForksSteps, ...deployAndVerifyOnRealNetworkSteps, ...testDeployedOnRealNetworkSteps];
-}
-
 async function spawnNode(
   rpcForkUrl: string,
   chainId: number,
@@ -400,8 +422,7 @@ async function spawnNode(
   if (forkBlock !== undefined) {
     nodeArgs.push("--fork-block-number", `${forkBlock}`);
   }
-  console.log("nodeArgs=",nodeArgs);
-
+  
   const output = createWriteStream(`./artifacts/${outputFileName}`);
   await once(output, "open");
 
@@ -436,5 +457,6 @@ async function spawnNode(
 export {
   Context,
   Step,
+  DeployAction,
   getSteps
 }
