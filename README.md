@@ -37,8 +37,8 @@ This command installs all necessary dependencies for the automaton and its submo
 ### Prerequisites
 
 - A Safe multisig must be created.
-- The deployer must have sufficient ETH on both networks.
-- Token rate forwarding must be set up either by adding a pusher to the Lido core protocol (voting required) or setting up an automatic solution, e.g., [Chainlink automation](https://docs.chain.link/chainlink-automation).
+- The deployer must have sufficient gas on both networks.
+- Token rate forwarding must be set up using an automatic solution, e.g., [Chainlink automation](https://docs.chain.link/chainlink-automation).
 
 ### Config Setup
 
@@ -68,10 +68,10 @@ yarn start ./path/to/config.yaml --actions fork deploy verify --showLogs true
 
 Available actions:
 
-- `fork` - deploy and test on forked network
+- `fork` - deploy, check and test on forked network
 - `deploy` - deploy on live network
-- `verify` - verify on live network
-- `check` - check on live network
+- `verify` - verify the contract's source code on the live network
+- `check` - check and test on live network
 - `all` - run all actions
 
 > **Note**: The entire process typically takes around 15 minutes, depending on network conditions and RPC response times.
