@@ -70,7 +70,7 @@ Available actions:
 
 - `fork` - deploy, check and test on forked network
 - `deploy` - deploy on live network
-- `verify` - verify the contract's source code on the live network
+- `publish-sources` - publish sources on live network
 - `check` - check and test on live network
 - `all` - run all actions
 

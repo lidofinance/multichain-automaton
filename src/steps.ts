@@ -46,10 +46,10 @@ interface Step {
 }
 
 enum DeployAction {
-  Fork = "fork",         // Deploy and test on fork
-  Deploy = "deploy",     // Deploy on real network
-  Verify = "verify",     // Run verification steps
-  Check = "check"        // Check real network deployment
+  Fork = "fork",                       // Deploy and test on fork
+  Deploy = "deploy",                   // Deploy on real network
+  PublishSources = "publish-sources",  // Publish sources on live network
+  Check = "check"                      // Check real network deployment
 }
 
 function getSteps(actions: DeployAction[]): Step[] {
@@ -63,8 +63,8 @@ function getSteps(actions: DeployAction[]): Step[] {
     steps.push(...deployOnRealNetworkSteps);
   }
   
-  if (actions.includes(DeployAction.Verify)) {
-    steps.push(...verifyOnRealNetworkSteps);
+  if (actions.includes(DeployAction.PublishSources)) {
+    steps.push(...publishSourcesSteps);
   }
   
   if (actions.includes(DeployAction.Check)) {
@@ -249,7 +249,7 @@ const deployOnRealNetworkSteps: Step[] = [
   }
 ];
 
-const verifyOnRealNetworkSteps: Step[] = [
+const publishSourcesSteps: Step[] = [
   {
     name: "Wait for Block Explorer to Confirm Address as Contract",
     action: async (_, logCallback) => {

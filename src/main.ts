@@ -14,7 +14,7 @@ import { Context, getSteps, DeployAction } from "./steps";
 function parseCmdLineArgs() {
   program
     .argument("<config-path>", "path to .yaml config file")
-    .option("--actions [actions...]", "list of actions: fork deploy verify check", ["all"])
+    .option("--actions [actions...]", "list of actions: fork deploy publish-sources check. E.g. --actions fork deploy publish-sources check. Default: all", ["all"])
     .option("--showLogs", "show logs in console")
     .parse();
 
@@ -37,10 +37,10 @@ function deployActionsFromActionsOption(actionsOption: string[]): DeployAction[]
       switch (trimmedAction) {
         case "fork": return DeployAction.Fork;
         case "deploy": return DeployAction.Deploy;
-        case "verify": return DeployAction.Verify;
+        case "publish-sources": return DeployAction.PublishSources;
         case "check": return DeployAction.Check;
         default:
-          throw new Error(`Invalid action: ${action}. Valid actions are: fork, deploy, verify, check`);
+          throw new Error(`Invalid action: ${action}. Valid actions are: fork, deploy, publish-sources, check`);
       }
     });
 }
