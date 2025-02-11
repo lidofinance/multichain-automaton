@@ -1,7 +1,8 @@
 [submodule "lido-l2-with-steth"]
 	path = lido-l2-with-steth
 	url = https://github.com/lidofinance/lido-l2-with-steth.git
-    branch = feature/save-tx-block-number
+    branch = main
+    commit = 7ccaec1f494adf34d7dfc060996cb9191b87a20c
 [submodule "state-mate"]
 	path = state-mate
 	url = https://github.com/lidofinance/state-mate.git

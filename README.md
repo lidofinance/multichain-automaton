@@ -4,7 +4,7 @@
 
 ## Overview
 
-**Multichain Automaton** is a sophisticated deployment and verification script designed to streamline the **deployment of stETH/wstETH [custom token bridge following reference architecture](https://docs.lido.fi/token-guides/wsteth-bridging-guide#reference-architecture-and-permissions-setup) solutions on OP Stack-compatible networks** for example OP Mainnet, Base, Zircuit, and Mode. It utilizes recommended initialization parameters and automates the verification of deployment artifacts.
+**Multichain Automaton** is a sophisticated deployment and verification script designed to streamline the **deployment of stETH/wstETH [custom token bridge following reference architecture](https://docs.lido.fi/token-guides/wsteth-bridging-guide#reference-architecture-and-permissions-setup) solutions on OP Stack-compatible networks** (such as OP Mainnet, Base, Zircuit, and Mode) with planned support for Arbitrum in the future. It utilizes recommended initialization parameters and automates the verification of deployment artifacts.
 
 ## Why Use Multichain Automaton?
 
@@ -36,8 +36,9 @@ This command installs all necessary dependencies for the automaton and its submo
 
 ### Prerequisites
 
-- deployer must have ETH on both networks.
-- config setup with EM brakes.
+- A Safe multisig must be created.
+- The deployer must have sufficient gas on both networks.
+- Token rate forwarding must be set up using an automatic solution, e.g., [Chainlink automation](https://docs.chain.link/chainlink-automation).
 
 ### Config Setup
 
@@ -53,13 +54,27 @@ cp .env.example .env
 
 ### Running the Script
 
-Execute the script with your configuration file:
+Execute the script with your config file and default parameters:
 
 ```bash
 yarn start ./path/to/config.yaml
 ```
 
-> **Note**: During execution, you will be prompted to confirm certain steps in the deployment process. The entire process typically takes around 15 minutes, depending on network conditions and RPC response times.
+You can also run the script with specific actions and showing logs in console:
+
+```bash
+yarn start ./path/to/config.yaml --actions fork deploy verify --showLogs true
+```
+
+Available actions:
+
+- `fork` - deploy, check and test on forked network
+- `deploy` - deploy on live network
+- `publish-sources` - publish sources on live network
+- `check` - check and test on live network
+- `all` - run all actions
+
+> **Note**: The entire process typically takes around 15 minutes, depending on network conditions and RPC response times.
 
 ### Docker
 

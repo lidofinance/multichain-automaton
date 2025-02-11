@@ -9,37 +9,66 @@ import * as YAML from "yaml";
 import { logToStream, LogType } from "./log-utils";
 import { MainConfig } from "./main-config";
 import { ProgressBar } from "./progress-bar";
-import { Context, getSteps } from "./steps";
+import { Context, getSteps, DeployAction } from "./steps";
 
 function parseCmdLineArgs() {
   program
     .argument("<config-path>", "path to .yaml config file")
-    .option("--onlyCheck", "only check the real network deployment")
-    .option("--onlyForkDeploy", "only deploy to the forked network")
+    .option("--actions [actions...]", "list of actions: fork deploy publish-sources check. E.g. --actions fork deploy publish-sources check. Default: all", ["all"])
     .option("--showLogs", "show logs in console")
-    .option("--startFromStep", "start from step with index")
     .parse();
 
   const configPath = program.args[0];
+  const actionsOption = program.getOptionValue("actions") || Array("all");  
+  const actions = deployActionsFromActionsOption(actionsOption);
+
   return {
     configPath,
-    onlyCheck: program.getOptionValue("onlyCheck"),
-    onlyForkDeploy: program.getOptionValue("onlyForkDeploy"),
+    actions: actions,
     showLogs: program.getOptionValue("showLogs"),
-    startFromStep: Number(program.getOptionValue("startFromStep") ?? 0),
+  };
+}
+
+function deployActionsFromActionsOption(actionsOption: string[]): DeployAction[] {
+  return (actionsOption[0] === "all") ? 
+    Object.values(DeployAction) :
+    actionsOption.map(action => {
+      const trimmedAction = action.trim().toLowerCase();
+      switch (trimmedAction) {
+        case "fork": return DeployAction.Fork;
+        case "deploy": return DeployAction.Deploy;
+        case "publish-sources": return DeployAction.PublishSources;
+        case "check": return DeployAction.Check;
+        default:
+          throw new Error(`Invalid action: ${action}. Valid actions are: fork, deploy, publish-sources, check`);
+      }
+    });
+}
+
+function loadYamlConfig(stateFile: string): {
+  mainConfig: MainConfig;
+  mainConfigDoc: YAML.Document;
+} {
+  const file = path.resolve(stateFile);
+  const configContent = fs.readFileSync(file, "utf-8");
+  const reviver = (_: unknown, v: unknown) => {
+    return typeof v === "bigint" ? String(v) : v;
+  };
+
+  return {
+    mainConfig: YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true }),
+    mainConfigDoc: YAML.parseDocument(configContent, { intAsBigInt: true }),
   };
 }
 
 async function main() {
   const logStream = fs.createWriteStream("./artifacts/main.log");
 
-  const { configPath, onlyCheck, onlyForkDeploy, showLogs, startFromStep } = parseCmdLineArgs();
+  const { configPath, actions, showLogs } = parseCmdLineArgs();
   console.log("Running script with");
   console.log(`  - configPath: ${configPath}`);
-  console.log(`  - onlyCheck: ${!!onlyCheck}`);
-  console.log(`  - onlyForkDeploy: ${!!onlyForkDeploy}`);
+  console.log(`  - actions: ${actions}`);
   console.log(`  - showLogs: ${!!showLogs}`);
-  console.log(`  - startFromStep: ${startFromStep}`);
 
   const { mainConfig, mainConfigDoc }: { mainConfig: MainConfig; mainConfigDoc: YAML.Document } =
     loadYamlConfig(configPath);
@@ -52,16 +81,11 @@ async function main() {
   };
 
   const progress = new ProgressBar(showLogs);
-  const steps = getSteps(onlyForkDeploy, onlyCheck);
-
-  if (startFromStep < 0 || startFromStep >= steps.length) {
-    console.error(`Step index is out of bounds ${startFromStep}`);
-    process.exit(1);
-  }
+  const steps = getSteps(actions);
 
   progress.start(steps.length);
 
-  for (let stepIdx = startFromStep; stepIdx < steps.length; stepIdx++) {
+  for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
     const { name, action } = steps[stepIdx];
     progress.update(stepIdx, name);
     logStream.write(`[${new Date().toISOString()}] ${name}`);
@@ -84,19 +108,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-function loadYamlConfig(stateFile: string): {
-  mainConfig: MainConfig;
-  mainConfigDoc: YAML.Document;
-} {
-  const file = path.resolve(stateFile);
-  const configContent = fs.readFileSync(file, "utf-8");
-  const reviver = (_: unknown, v: unknown) => {
-    return typeof v === "bigint" ? String(v) : v;
-  };
-
-  return {
-    mainConfig: YAML.parse(configContent, reviver, { schema: "core", intAsBigInt: true }),
-    mainConfigDoc: YAML.parseDocument(configContent, { intAsBigInt: true }),
-  };
-}
