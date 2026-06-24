@@ -22,6 +22,11 @@ updates:
     groups:
       javascript:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "hardhat"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "chalk"
+        update-types: ["version-update:semver-major"]
     labels: ["dependencies", "javascript"]
     commit-message:
       prefix: "build"
