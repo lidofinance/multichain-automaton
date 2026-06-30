@@ -62,6 +62,9 @@ async function checkAddressContractStatus({
           return;
         }
       }
+      if (body.status == "0" && body.result.includes("Invalid API Key")) {
+        throw new Error(`Invalid API key`);
+      }
 
       logCallback(`${address} appears to be an EOA. Retrying in ${checkInterval / 1000} seconds...`, LogType.Level1);
       await new Promise((resolve) => setTimeout(resolve, checkInterval));
@@ -70,8 +73,9 @@ async function checkAddressContractStatus({
       await new Promise((resolve) => setTimeout(resolve, checkInterval));
     }
   }
-
-  logCallback(`${address} could not be confirmed as a contract after ${maxTries} attempts.`, LogType.Level1);
+  const errorMessage = `${address} could not be confirmed as a contract after ${maxTries} attempts.`;
+  logCallback(errorMessage, LogType.Level1);
+  throw new Error(errorMessage);
 }
 
 export {

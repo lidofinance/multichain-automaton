@@ -31,7 +31,6 @@ function setupIntegrationTests(
     TESTING_OPT_L2_REBASABLE_TOKEN: deployedContracts.l2.tokenRebasableProxyAddress,
     TESTING_OPT_L2_ERC20_TOKEN_BRIDGE: deployedContracts.l2.tokenBridgeProxyAddress,
   }, { override: true });
-  console.log("process.env=", process.env);
 }
 
 async function runIntegrationTestsScript({

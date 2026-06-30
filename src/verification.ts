@@ -81,8 +81,27 @@ function setupGovExecutorVerification() {
   );
 }
 
+function setupHardhatConfigInL2Repo() {
+  dotenv.populate(
+    process.env as { [key: string]: string },
+    {
+      L1_PRC_URL: env.url("L1_REMOTE_RPC_URL"),
+      L2_PRC_URL: env.url("L2_REMOTE_RPC_URL"),
+      L1_BLOCK_EXPLORER_API_KEY: env.string("L1_EXPLORER_TOKEN"),
+      L2_BLOCK_EXPLORER_API_KEY: env.string("L2_EXPLORER_TOKEN"),
+      L1_CHAIN_ID: env.string("L1_CHAIN_ID"),
+      L2_CHAIN_ID: env.string("L2_CHAIN_ID"),
+      L1_BLOCK_EXPLORER_BROWSER_URL: env.url("L1_BLOCK_EXPLORER_BROWSER_URL"),
+      L2_BLOCK_EXPLORER_BROWSER_URL: env.url("L2_BLOCK_EXPLORER_BROWSER_URL"),
+      L1_BLOCK_EXPLORER_API_URL: `https://${env.string("L1_BLOCK_EXPLORER_API_HOST")}/api`,
+      L2_BLOCK_EXPLORER_API_URL: `https://${env.string("L2_BLOCK_EXPLORER_API_HOST")}/api`
+    }
+  );
+}
+
 export {
     runVerificationScript,
     waitForBlockFinalization,
-    setupGovExecutorVerification
+    setupGovExecutorVerification,
+    setupHardhatConfigInL2Repo
 }

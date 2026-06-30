@@ -27,7 +27,7 @@ import { LogCallback, LogType } from "./log-utils";
 import { DeployParameters, MainConfig, TestingParameters } from "./main-config";
 import { diffyscanRpcUrl, l1RpcUrl, l2RpcUrl, localL1RpcPort, localL2RpcPort, NetworkType } from "./rpc-utils";
 import { runStateMateScript, setupStateMateConfig, setupStateMateEnvs } from "./state-mate";
-import { runVerificationScript, setupGovExecutorVerification } from "./verification";
+import { runVerificationScript, setupGovExecutorVerification, setupHardhatConfigInL2Repo } from "./verification";
 
 const NUM_L1_DEPLOYED_CONTRACTS = 10;
 
@@ -198,6 +198,11 @@ const deployAndTestOnForksSteps: Step[] = [
 
 const deployOnRealNetworkSteps: Step[] = [
   {
+    name: "Burn L2 Deployer Nonces",
+    action: (_, logCallback) =>
+      burnL2DeployerNonces(l2RpcUrl(NetworkType.Live), NUM_L1_DEPLOYED_CONTRACTS, logCallback),
+  },
+  {
     name: "Deploy Governance Executor",
     action: async (ctx, logCallback) => {
       const govBridgeExecutor = await deployGovExecutor(
@@ -215,11 +220,6 @@ const deployOnRealNetworkSteps: Step[] = [
         deploymentResultsFilename: "deployment_live_result.json",
       });
     },
-  },
-  {
-    name: "Burn L2 Deployer Nonces",
-    action: (_, logCallback) =>
-      burnL2DeployerNonces(l2RpcUrl(NetworkType.Live), NUM_L1_DEPLOYED_CONTRACTS, logCallback),
   },
   {
     name: "Run Deploy Script",
@@ -282,6 +282,7 @@ const publishSourcesSteps: Step[] = [
   {
     name: "Verification",
     action: async (_, logCallback) => {
+      setupHardhatConfigInL2Repo();
       await runVerificationScript({
         config: "l1_live_deployment_args.json",
         network: "l1",
